@@ -6,6 +6,7 @@ import importlib.util
 import json
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import pytest
 
@@ -200,3 +201,111 @@ def test_subset_actual_head_capture_and_retained_state_replay(probes):
         target.bias[0] += 1
         with pytest.raises(ValueError, match="logits changed"):
             subset.retained_trace_checks(left, right, target, old, new, mapping)
+
+
+@pytest.fixture(scope="module")
+def compact_probe_bundles(tmp_path_factory):
+    from untok.bundles import PROFILES, load_tokenizer_bundle, package_tokenizer_bundles
+    from untok.clean import build_clean_bundles
+
+    data = Path(__file__).resolve().parents[1] / "src" / "untok" / "data"
+    output = tmp_path_factory.mktemp("compact-probe-bundles")
+    build_clean_bundles(data / "source", output / "clean")
+    package_tokenizer_bundles(data / "source", output / "legacy", profiles=["latin"], make_zips=False)
+    return ({profile: load_tokenizer_bundle(output / "clean" / profile) for profile in PROFILES},
+            load_tokenizer_bundle(output / "legacy" / "latin"))
+
+
+def _native_source(raw):
+    import sentencepiece as spm
+
+    processor = spm.SentencePieceProcessor(model_proto=raw)
+    return SimpleNamespace(tokenizer=SimpleNamespace(
+        backend=processor, vocab_size=processor.get_piece_size(),
+        ids_to_tokens=lambda ids: [processor.id_to_piece(index) for index in ids],
+        text_to_ids=lambda text: processor.encode(text, out_type=int),
+    ))
+
+
+@pytest.mark.parametrize("profile", ["full", "latin-indic", "latin"])
+@pytest.mark.parametrize("inventory", ["original_native_base", "original_untok_full_v1"])
+def test_compact_probe_selects_the_exact_migrated_source_map(probes, compact_probe_bundles, profile, inventory):
+    _, subset = probes
+    clean, _ = compact_probe_bundles
+    target = clean[profile]
+    is_base = inventory == "original_native_base"
+    raw = target.base_model_bytes if is_base else target.full_model_bytes
+    expected = target.source_native_to_target_native if is_base else target.full_native_to_subset_native
+    report = {
+        "source_inventory": inventory, "source_tokenizer_sha256": subset.sha_bytes(raw),
+        "source_remapping": "source_native_to_target_native" if is_base else "full_native_to_subset_native",
+        "old_model_to_new_model": list(expected), "requires_retokenized_training_labels": True,
+    }
+    actual, evidence = subset.select_probe_inventory(_native_source(raw), target, report)
+    assert actual == expected and actual[-1] == target.blank_id
+    if is_base or profile != "latin":
+        assert actual[:-1] == tuple(range(len(actual) - 1))
+    else:
+        assert any(index is None for index in actual)
+    assert evidence["source_inventory"] == inventory
+    assert evidence["source_tokenizer_sha256"] == subset.sha_bytes(raw)
+    assert evidence["source_native_check"]["piece_ids_checked"] == len(actual) - 1
+    assert evidence["requires_retokenized_training_labels"]
+    wrong = dict(report, old_model_to_new_model=list(
+        target.full_native_to_subset_native if is_base else target.source_native_to_target_native))
+    with pytest.raises(ValueError, match="source mapping"):
+        subset.select_probe_inventory(_native_source(raw), target, wrong)
+
+
+@pytest.mark.parametrize("field", ["source_inventory", "source_tokenizer_sha256", "source_remapping",
+                                   "requires_retokenized_training_labels"])
+def test_compact_probe_rejects_missing_or_forged_inventory_metadata(probes, compact_probe_bundles, field):
+    _, subset = probes
+    clean, _ = compact_probe_bundles
+    target = clean["latin-indic"]
+    source = _native_source(target.full_model_bytes)
+    report = {
+        "source_inventory": "original_untok_full_v1",
+        "source_tokenizer_sha256": subset.sha_bytes(target.full_model_bytes),
+        "source_remapping": "full_native_to_subset_native",
+        "old_model_to_new_model": list(target.full_native_to_subset_native),
+        "requires_retokenized_training_labels": True,
+    }
+    for change in ("missing", "forged"):
+        altered = dict(report)
+        if change == "missing":
+            altered.pop(field)
+        else:
+            altered[field] = False if field == "requires_retokenized_training_labels" else "wrong"
+        with pytest.raises(ValueError, match="inventory|retokenized"):
+            subset.select_probe_inventory(source, target, altered)
+
+
+def test_legacy_subset_probe_accepts_its_original_report_without_new_fields(probes, compact_probe_bundles):
+    _, subset = probes
+    _, legacy = compact_probe_bundles
+    original = _native_source(legacy.base_model_bytes)
+    mapping, evidence = subset.select_probe_inventory(
+        original, legacy, {"old_model_to_new_model": list(legacy.source_native_to_target_native)})
+    assert mapping == legacy.source_native_to_target_native
+    assert evidence["source_inventory"] == "original_native_base"
+    assert not evidence["requires_retokenized_training_labels"]
+    with pytest.raises(ValueError, match="not a pinned"):
+        subset.select_probe_inventory(_native_source(legacy.full_model_bytes), legacy,
+                                      {"old_model_to_new_model": list(legacy.full_native_to_subset_native)})
+
+
+def test_clean_full_probe_includes_original_non_latin_and_indic_locales(probes):
+    _, subset = probes
+    languages = ["en", "ru", "ja", "ko", "zh", "el", "he", "th", "ml", "hi", "ar"]
+    records = [{"id": f"{language}-{seconds}", "language": language,
+                "target_lang": f"{language}-XX", "duration": seconds}
+               for language in languages for seconds in (12, 5)]
+    selected = subset.choose_rows(records, "full")
+    assert {row["language"] for row in selected} == set(languages)
+    assert all(row["duration"] == 5 for row in selected)
+    assert [row["language"] for row in subset.choose_rows(records, "full", ["ru", "ml"])] == ["ml", "ru"]
+    with pytest.raises(ValueError, match="outside"):
+        subset.choose_rows(records, "full", ["xx"])
+    with pytest.raises(ValueError, match="checkpoint"):
+        subset.choose_rows(records, "unknown")

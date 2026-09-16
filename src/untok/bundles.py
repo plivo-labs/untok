@@ -22,6 +22,10 @@ def _load_tokenizer_directory(directory: str | Path):
     """Load a verified full native bundle or a separately validated subset."""
     directory = Path(directory)
     manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
+    if manifest.get("algorithm") == "native_sentencepiece_unigram_preserved_v3":
+        from .clean import CleanTokenizerAdapter
+
+        return CleanTokenizerAdapter(directory)
     if manifest.get("algorithm") == "native_sentencepiece_unigram_subset":
         return NativeSubsetTokenizerAdapter(directory)
     adapter = NativeTokenizerAdapter(directory)
@@ -311,9 +315,12 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
         raise ValueError("Output and source bundle directories must not overlap")
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
         raise ValueError("Expected an empty output directory")
-    NativeTokenizerAdapter(bundle)
+    adapter = load_tokenizer_bundle(bundle)
     source_manifest_bytes = (bundle / "manifest.json").read_bytes()
     source_manifest = json.loads(source_manifest_bytes)
+    clean_source = source_manifest.get("algorithm") == "native_sentencepiece_unigram_preserved_v3"
+    if not clean_source and source_manifest.get("algorithm") != "native_sentencepiece_unigram":
+        raise ValueError("Packaging requires an original full bundle or a preserved v3 bundle")
     names = sorted(set(source_manifest["files"]) | {"manifest.json"})
     if any((bundle / name).is_symlink() for name in names):
         raise ValueError("Source bundle files must not be symlinks")
@@ -321,14 +328,21 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
     base_bytes, full_bytes = source_files["base-tokenizer.model"], source_files["tokenizer.model"]
     prepared = {}
     for profile in profiles:
-        if profile == "full":
+        if clean_source:
+            from .clean import _artifacts
+
+            files, manifest, _, _ = _artifacts(base_bytes, adapter.full_model_bytes, profile)
+            prepared[profile] = ({**files, "manifest.json": _json_bytes(manifest)}, manifest)
+        elif profile == "full":
             prepared[profile] = (source_files, source_manifest)
         else:
             files, manifest, _, _ = _subset_artifacts(base_bytes, full_bytes, profile)
             prepared[profile] = ({**files, "manifest.json": _json_bytes(manifest)}, manifest)
     receipt = {
         "schema_version": 1, "source_manifest_sha256": _digest(source_manifest_bytes),
-        "full_tokenizer_sha256": _digest(full_bytes), "base_tokenizer_sha256": _digest(base_bytes),
+        "source_tokenizer_sha256": _digest(full_bytes),
+        "full_tokenizer_sha256": _digest(adapter.full_model_bytes if clean_source else full_bytes),
+        "base_tokenizer_sha256": _digest(base_bytes),
         "zip_format": "stored, sorted filenames, fixed Unix permissions and 1980 timestamp" if make_zips else None,
         "bundles": {},
     }

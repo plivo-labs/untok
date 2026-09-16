@@ -375,14 +375,14 @@ def test_zip_resource_manifest_rejects_path_traversal(package_resources, tmp_pat
             load_tokenizer_bundle("latin")
 
 
-@pytest.mark.parametrize("profile,size", [("latin", 2916), ("latin-indic", 10572), ("full", 20550)])
+@pytest.mark.parametrize("profile,size", [("latin", 13573), ("latin-indic", 20784), ("full", 20784)])
 def test_installed_profiles_include_the_frozen_candidate(profile, size):
     from untok.bundles import load_tokenizer
 
     expected_hashes = {
-        "latin": "2068ef8838a2180c8ef794cc492e92dae80941420e1bc418387f7a1ced143b71",
-        "latin-indic": "368143b5b661eecf1865798ff1cc4e2763932613864e7928df44a42059631e1a",
-        "full": "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8",
+        "latin": "e250b6b2f47ed337f13c3a957637feada09dbcf6e6d1bf628119647eadb70f12",
+        "latin-indic": "782eb9525d3dff47678dc10a69abf58f51752a8016514908769d9056c2b323e2",
+        "full": "782eb9525d3dff47678dc10a69abf58f51752a8016514908769d9056c2b323e2",
     }
     tokenizer = load_tokenizer(profile)
     assert tokenizer.vocab_size == size

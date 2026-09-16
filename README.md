@@ -1,13 +1,16 @@
 # untok
 
-A SentencePiece Unigram tokenizer for speech-to-text (ASR) and TTS models. The Latin vocabulary is based on NVIDIA Nemotron, extended with Indic language support.
+A SentencePiece Unigram tokenizer for speech-to-text (ASR) and TTS models, based
+on NVIDIA Nemotron's native vocabulary and extended with Indic language support.
+All bundles preserve every original Nemotron text-token ID, piece, score,
+type and normalizer setting. New pieces are appended after the original bank.
 
 ## Install
 
 On Linux or macOS, clone the repository:
 
 ```sh
-git clone https://github.com/bevenky/untok.git
+git clone https://github.com/plivo-labs/untok.git
 cd untok
 ```
 
@@ -32,12 +35,19 @@ All three bundles are included. Choose one when loading the tokenizer.
 
 | Bundle | Text IDs | Includes |
 | --- | ---: | --- |
-| `latin` | 2,916 | Latin pieces, shared punctuation and special tokens |
-| `latin-indic` | 10,572 | Latin plus all 22 target Indic profiles |
-| `full` | 20,550 | Original Nemotron vocabulary plus all approved additions |
+| `latin` | 13,573 | Original Nemotron bank plus Latin/shared additions |
+| `latin-indic` | 20,784 | Original Nemotron bank plus Latin and Indic additions |
+| `full` | 20,784 | Original Nemotron bank plus all admitted additions |
 
-The full bundle preserves the original 13,087 entries, IDs and scores. The smaller
-bundles use compact IDs.
+**All 13,087 original text IDs (`0..13086`) are unchanged in every bundle.**
+Profiles restrict added pieces only. The original multilingual bank is never
+filtered, so the current `full` and `latin-indic` model bytes are identical.
+The RNNT acoustic blank moves to the new final output row during checkpoint
+migration; it is separate from SentencePiece text IDs. Retained weights are
+copied, including the learned blank row. See [ID preservation](docs/native-preservation.md).
+All three v3 checkpoints passed real NeMo save/reload with exact preservation of
+every original learned value; [migration results](configs/native-checkpoint-v3-results.json)
+record the hashes and scope. Speech accuracy is a separate evaluation.
 
 ## Use the tokenizer
 
@@ -58,8 +68,11 @@ a custom bundle. The example uses native text IDs.
 
 ## Languages
 
-These counts describe tokenizer text coverage. Regional variants count once;
-Norwegian includes Bokmål and Nynorsk.
+These lists describe the minimum intended evaluation scope. All bundles also
+retain the complete original multilingual vocabulary. Regional variants count
+once. The [language coverage report](docs/language-coverage.md) records corpus
+checks, remaining unknown characters and limits; Norwegian has a Bokmål text
+sample, with Nynorsk untested.
 
 **`latin`: 24 languages.** Croatian, Czech, Danish, Dutch, English, Estonian,
 Finnish, French, German, Hungarian, Italian, Latvian, Lithuanian, Maltese,
@@ -81,13 +94,16 @@ Japanese, Korean, Mandarin Chinese, Russian, Thai and Ukrainian.
 
 - Text coverage does not mean a model can recognize or generate speech in those
   languages.
-- Using this with an existing Nemotron model requires a matching migrated checkpoint; new pieces need
-  speech training before the model can use them reliably. See [checkpoint usage](docs/native-checkpoint.md).
-- Nemotron's original normalization is retained, including its joiner handling.
-  Decoding may not reproduce the raw input exactly. Keeping original IDs does not guarantee identical
-  segmentation or speech accuracy. Added pieces can change segmentation, including Hindi.
+- Existing checkpoints need vocabulary expansion and blank-row migration. Original
+  text labels retain their meanings; regenerate labels to use new segmentation.
+  New pieces need speech training. V3 has no completed
+  acoustic validation; see [checkpoint usage](docs/native-checkpoint.md).
+- The original normalizer is unchanged: ZWNJ becomes a space and legacy Malayalam
+  chillu spellings remain distinct. Decoding returns native-normalized text.
 - The vocabulary is finite. Uncovered characters or emoji can produce `<unk>`;
   alternate scripts and every dialect are not validated.
 - Selecting a bundle selects a vocabulary, not an inference language lock.
 
-See [source provenance](THIRD_PARTY.md) for tokenizer and data sources.
+See the [native tokenizer guide](docs/native-unigram.md),
+[reproduction workflow](docs/native-reproduction.md), and
+[source provenance](THIRD_PARTY.md) for implementation and source details.

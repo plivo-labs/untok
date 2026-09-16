@@ -5,7 +5,7 @@ policy and corpus manifest are inputs; no user paths or research files are used.
 """
 from __future__ import annotations
 
-from collections import Counter
+from collections import Counter, defaultdict
 import hashlib
 import json
 import math
@@ -18,6 +18,17 @@ import sentencepiece as spm
 from sentencepiece import sentencepiece_model_pb2 as pb
 
 from .unigram import NativeTokenizerAdapter, validate_native_prefix
+
+
+_CORPUS_LIMITS = {
+    "max_unknown_records": "unknown_records",
+    "max_unknown_tokens": "unknown_tokens",
+    "max_unknown_record_rate": "unknown_record_rate",
+    "max_unknown_token_rate": "unknown_token_rate",
+    "max_mean_tokens_per_normalized_character": "mean_tokens_per_normalized_character",
+    "max_tokens_p95": "tokens_p95",
+    "max_tokens_p99": "tokens_p99",
+}
 
 
 def _sha(path: Path) -> str:
@@ -67,6 +78,23 @@ def _policy(path: Path) -> dict:
             raise ValueError(f"Duplicate protected pieces: {name}")
     if "approved_new_latin_pieces" in policy:
         _strings(policy["approved_new_latin_pieces"], "approved_new_latin_pieces", nonempty=True)
+    thresholds = policy.get("corpus_thresholds", {})
+    if not isinstance(thresholds, dict) or set(thresholds) - {"dev", "reserve"}:
+        raise ValueError("Policy corpus_thresholds must contain only dev/reserve objects")
+    for phase, settings in thresholds.items():
+        if not isinstance(settings, dict) or set(settings) - {"default", "profiles"}:
+            raise ValueError(f"Invalid corpus_thresholds.{phase}")
+        by_profile = settings.get("profiles", {})
+        if not isinstance(by_profile, dict) or set(by_profile) - set(profiles):
+            raise ValueError(f"Unknown threshold profile in corpus_thresholds.{phase}")
+        for limits in [settings.get("default", {}), *by_profile.values()]:
+            if not isinstance(limits, dict) or set(limits) - set(_CORPUS_LIMITS):
+                raise ValueError(f"Unknown corpus threshold in {phase}")
+            for name, value in limits.items():
+                if (isinstance(value, bool) or not isinstance(value, (int, float))
+                        or not math.isfinite(value) or value < 0
+                        or (name.endswith("_rate") and value > 1)):
+                    raise ValueError(f"Invalid corpus threshold: {name}")
     return policy
 
 
@@ -100,6 +128,153 @@ def _matcher(pieces: list[str]):
                     return True
         return False
     return matches
+
+
+def _inventory_quality(raw: bytes, checked_ids: set[int] | None = None) -> dict:
+    """Inspect actual NORMAL strings/scores, preserving every word boundary."""
+    model = pb.ModelProto()
+    model.ParseFromString(raw)
+    if checked_ids is None:
+        checked_ids = {i for i, p in enumerate(model.pieces) if p.type == pb.ModelProto.SentencePiece.NORMAL}
+    # Normalize piece interiors with no artificial boundary and no whitespace
+    # trimming. A leading metaspace is a boundary, not an alias of its absence.
+    normalizer = spm.SentencePieceNormalizer(
+        model_proto=raw, add_dummy_prefix=False, remove_extra_whitespaces=False,
+        escape_whitespaces=model.normalizer_spec.escape_whitespaces,
+    )
+    normalized, changed = defaultdict(list), []
+    scores = {p.piece: p.score for p in model.pieces if p.type == pb.ModelProto.SentencePiece.NORMAL}
+    for index, piece in enumerate(model.pieces):
+        if piece.type != pb.ModelProto.SentencePiece.NORMAL:
+            continue
+        text = piece.piece.replace("▁", " ") if model.normalizer_spec.escape_whitespaces else piece.piece
+        normal = normalizer.normalize(text)
+        normalized[normal].append(index)
+        if index in checked_ids and normal != piece.piece:
+            changed.append({"native_id": index, "piece": piece.piece, "normalized": normal})
+    aliases = [{"normalized": value,
+                "pieces": [{"native_id": i, "piece": model.pieces[i].piece} for i in ids]}
+               for value, ids in normalized.items() if len(ids) > 1 and any(i in checked_ids for i in ids)]
+    dominated = []
+    for index in sorted(checked_ids):
+        piece = model.pieces[index]
+        if piece.type != pb.ModelProto.SentencePiece.NORMAL:
+            continue
+        text = piece.piece
+        best = [-math.inf] * (len(text) + 1)
+        split = [None] * (len(text) + 1)
+        best[0], split[0] = 0.0, []
+        for end in range(1, len(text) + 1):
+            for start in range(end):
+                if start == 0 and end == len(text):
+                    continue  # Exclude the whole piece itself.
+                part = text[start:end]
+                score = scores.get(part)
+                if score is not None and best[start] + score > best[end]:
+                    best[end] = best[start] + score
+                    split[end] = split[start] + [part]
+        # Float32 stored scores are exact inputs. Equality is not dominance.
+        if best[-1] > piece.score:
+            dominated.append({"native_id": index, "piece": text, "score": piece.score,
+                              "best_split": split[-1], "split_score": best[-1]})
+    counts = Counter(piece.piece for piece in model.pieces)
+    duplicates = sorted(piece for piece, count in counts.items() if count > 1)
+    gates = {"normalization_fixed_points": not changed,
+             "no_exact_duplicate_pieces": not duplicates,
+             "no_normalization_aliases": not aliases,
+             "no_strictly_dominated_pieces": not dominated}
+    return {"checked_piece_count": len(checked_ids), "normalization_failures": changed,
+            "exact_duplicates": duplicates, "normalization_aliases": aliases,
+            "strictly_dominated_pieces": dominated, "gates": gates, "passed": all(gates.values())}
+
+
+def _selection_quality(bundle: Path, proc, base_size: int) -> tuple[dict, dict]:
+    """Check actual model strings/scores; stored selection evidence is not proof."""
+    selection = _json(bundle / "selection.json")
+    additions = selection["additions"]  # Already bound to the model by the adapter.
+    for entry in additions:
+        if not isinstance(entry.get("required_reasons", []), list):
+            raise ValueError("Selection required_reasons must be a list")
+    quality = _inventory_quality((bundle / "tokenizer.model").read_bytes(), set(range(base_size, proc.get_piece_size())))
+    required = {entry["piece"]: _witness(proc, entry["piece"])
+                for entry in additions if entry.get("required_reasons")}
+    gates = {"new_normalization_fixed_points": not quality["normalization_failures"],
+             "no_exact_duplicate_pieces": not quality["exact_duplicates"],
+             "no_new_normalization_aliases": not quality["normalization_aliases"],
+             "no_strictly_dominated_additions": not quality["strictly_dominated_pieces"],
+             "required_piece_witnesses": all(value is not None for value in required.values())}
+    return {"new_piece_count": len(additions), "normalization_failures": quality["normalization_failures"],
+            "exact_duplicates": quality["exact_duplicates"], "normalization_aliases": quality["normalization_aliases"],
+            "strictly_dominated_additions": quality["strictly_dominated_pieces"],
+            "required_piece_count": len(required), "required_piece_witnesses": required,
+            "required_unwitnessed": sorted(piece for piece, value in required.items() if value is None),
+            "gates": gates, "static_passed": all(gates.values())}, selection
+
+
+def _training_usage(selection: dict, proc, profiles: dict, manifest_path: Path | None,
+                    files: dict | None, manifest_sha256: str | None) -> dict:
+    """Re-encode hash-pinned training text; never accept cached occurrence counts."""
+    additions = selection["additions"]
+    optional = [entry["piece"] for entry in additions if not entry.get("required_reasons")]
+    result = {"status": "incomplete", "optional_piece_count": len(optional),
+              "required_piece_count": len(additions) - len(optional), "files": {},
+              "missing_profiles": sorted(profiles), "empty_profiles": [],
+              "records": 0, "optional_unused": [], "required_unused": [], "additions": []}
+    if manifest_path is None:
+        return result
+    # Development corpora may be independently collected. They do not replace
+    # the corpus against which this particular selection was fitted.
+    expected_manifest = selection.get("data_manifest_sha256")
+    result["selection_manifest_matches"] = expected_manifest in (None, manifest_sha256)
+    if not result["selection_manifest_matches"]:
+        result["reason"] = "Corpus manifest is not the selection's pinned training manifest"
+        return result
+    names = {f"train/{lang}.jsonl" for lang in profiles}
+    names.update(name for name in files if name.startswith("train/") and name.endswith(".jsonl"))
+    inputs, missing = {}, []
+    for name in sorted(names):
+        path = _contained(manifest_path.parent, name)
+        if name not in files or not path.is_file():
+            missing.append(Path(name).stem)
+            continue
+        if not isinstance(files[name], str) or _sha(path) != files[name]:
+            raise ValueError(f"Training corpus integrity failure: {name}")
+        inputs[name] = path
+    counts, per_profile = Counter(), {}
+    for name, path in inputs.items():
+        records = nonempty = 0
+        lang = path.stem
+        with path.open(encoding="utf-8") as stream:
+            for line_number, line in enumerate(stream, 1):
+                if not line.strip():
+                    continue
+                row = json.loads(line)
+                if not isinstance(row, dict) or not isinstance(row.get("text"), str):
+                    raise ValueError(f"Expected a text string in {name}:{line_number}")
+                if "language" in row and row["language"] != lang:
+                    raise ValueError(f"Corpus language disagrees with profile {lang}: {name}:{line_number}")
+                records += 1
+                nonempty += bool(proc.normalize(row["text"]).replace("▁", "").strip())
+                counts.update(proc.encode(row["text"]))
+        per_profile[lang] = {"records": records, "nonempty_normalized_records": nonempty}
+    empty = sorted(lang for lang, row in per_profile.items() if not row["nonempty_normalized_records"])
+    rows = [{"piece": entry["piece"], "native_id": proc.piece_to_id(entry["piece"]),
+             "required": bool(entry.get("required_reasons")),
+             "training_occurrences": counts[proc.piece_to_id(entry["piece"])],
+             "declared_training_occurrences": entry.get("training_occurrences")}
+            for entry in additions]
+    unused_optional = [row["piece"] for row in rows if not row["required"] and not row["training_occurrences"]]
+    result.update({"files": {name: files[name] for name in inputs},
+                   "missing_profiles": missing, "empty_profiles": empty, "profiles": per_profile,
+                   "records": sum(row["records"] for row in per_profile.values()),
+                   "optional_unused": unused_optional,
+                   "required_unused": [row["piece"] for row in rows if row["required"] and not row["training_occurrences"]],
+                   "declared_count_mismatches": [row["piece"] for row in rows
+                       if row["declared_training_occurrences"] is not None
+                       and row["declared_training_occurrences"] != row["training_occurrences"]],
+                   "additions": rows, "data_manifest_sha256": manifest_sha256,
+                   "status": "incomplete" if missing or empty else ("failed" if unused_optional else "passed")})
+    return result
 
 
 def _structure(bundle: Path, policy: dict) -> tuple[dict, Any, Any, Any]:
@@ -195,9 +370,10 @@ def _percentile(values: list, q: float):
     return sorted(values)[max(0, math.ceil(q * len(values)) - 1)] if values else None
 
 
-def _corpus_metrics(path: Path, base, proc, proto, max_examples: int, expected_language: str) -> dict:
+def _corpus_metrics(path: Path, base, proc, proto, max_examples: int, expected_language: str,
+                    *, expected_processor=None) -> dict:
     total = Counter({key: 0 for key in ("records", "nonempty_normalized_records", "normalized_characters", "tokens",
-                    "normalizer_failures", "unknown_tokens", "unknown_records", "unknown_codepoint_occurrences",
+                    "normalizer_failures", "source_normalizer_changes", "unknown_tokens", "unknown_records", "unknown_codepoint_occurrences",
                     "native_unknown_tokens", "native_unknown_records", "roundtrip_failures",
                     "base_representable_records", "base_representable_changed")})
     lengths, ratios, failures, changed = [], [], [], []
@@ -214,7 +390,8 @@ def _corpus_metrics(path: Path, base, proc, proto, max_examples: int, expected_l
             text = row["text"]
             if "expected_text" in row and not isinstance(row["expected_text"], str):
                 raise ValueError(f"Expected an expected_text string in {path.name}:{line_number}")
-            normal = base.normalize(text)
+            expected_proc = base if expected_processor is None else expected_processor
+            normal = expected_proc.normalize(text)
             ids, old = proc.encode(text), base.encode(text)
             total["records"] += 1
             total["normalized_characters"] += len(normal)
@@ -224,6 +401,7 @@ def _corpus_metrics(path: Path, base, proc, proto, max_examples: int, expected_l
             total["native_unknown_records"] += bool(old_unknown)
             total["tokens"] += len(ids)
             total["normalizer_failures"] += normal != proc.normalize(text)
+            total["source_normalizer_changes"] += base.normalize(text) != proc.normalize(text)
             total["unknown_tokens"] += num
             total["unknown_records"] += bool(num)
             lengths.append(len(ids)); ratios.append(len(ids) / max(1, len(normal)))
@@ -237,7 +415,7 @@ def _corpus_metrics(path: Path, base, proc, proto, max_examples: int, expected_l
                         unknown.update(piece.piece)
                         total["unknown_codepoint_occurrences"] += len(piece.piece)
             else:
-                expected = row["expected_text"] if "expected_text" in row else _expected(base, proto, text)
+                expected = row["expected_text"] if "expected_text" in row else _expected(expected_proc, proto, text)
                 if proc.decode(ids) != expected:
                     total["roundtrip_failures"] += 1
                     if len(failures) < max_examples:
@@ -253,6 +431,8 @@ def _corpus_metrics(path: Path, base, proc, proto, max_examples: int, expected_l
     return {**total, "mean_tokens": sum(lengths) / len(lengths) if lengths else None,
             "tokens_p95": _percentile(lengths, .95), "tokens_p99": _percentile(lengths, .99),
             "mean_tokens_per_normalized_character": sum(ratios) / len(ratios) if ratios else None,
+            "unknown_record_rate": total["unknown_records"] / total["records"] if total["records"] else None,
+            "unknown_token_rate": total["unknown_tokens"] / total["tokens"] if total["tokens"] else None,
             "sources": dict(sources), "unknown_codepoints": {f"U+{ord(c):04X}": n for c, n in unknown.most_common()},
             "unknown_counting": "Emitted UNK IDs and normalized unknown-piece codepoints are distinct counts.",
             "roundtrip_failure_examples": failures, "base_representable_change_examples": changed}
@@ -277,18 +457,27 @@ def validate_native_tokenizer(
     """Return structural and text evidence without changing inputs or fitting.
 
     A corpus manifest declares ``files`` as relative-path-to-SHA256 mappings,
-    including ``{phase}/{language}.jsonl`` for each policy profile. Only the
-    requested phase is opened. Reserved text requires a hash-bound selection
+    including ``{phase}/{language}.jsonl`` and ``train/{language}.jsonl`` for
+    each policy profile. Training text is re-encoded for selection usage;
+    only the requested evaluation phase is opened. Reserved text requires a hash-bound selection
     receipt before any corpus file is read. Reserve reports never include text
     examples. Missing corpus targets are incomplete, not passed.
     """
     if phase not in {"dev", "reserve"} or isinstance(max_examples, bool) or not isinstance(max_examples, int) or max_examples < 0:
         raise ValueError("Use phase dev/reserve and a nonnegative integer max_examples")
     bundle, policy_file = Path(bundle_path), Path(policy_path)
+    if _json(bundle / "manifest.json").get("algorithm") == "native_sentencepiece_unigram_preserved_v3":
+        from .clean_validation import validate_clean_tokenizer
+
+        return validate_clean_tokenizer(bundle, policy_file, corpus_manifest_path, phase=phase,
+                                        selection_receipt_path=selection_receipt_path, max_examples=max_examples)
     policy = _policy(policy_file)
     report, base, proc, proto = _structure(bundle, policy)
+    quality, selection = _selection_quality(bundle, proc, base.get_piece_size())
     report.update({"policy_sha256": _sha(policy_file), "phase": phase, "corpus_status": "incomplete",
-                   "corpus_gates": {}, "corpora": {}, "missing_profiles": sorted(policy["profiles"])})
+                   "corpus_gates": {}, "corpora": {}, "missing_profiles": sorted(policy["profiles"]),
+                   "selection_quality": quality})
+    manifest_path = files = None
     if corpus_manifest_path is not None:
         manifest_path = Path(corpus_manifest_path)
         manifest = _json(manifest_path)
@@ -315,8 +504,8 @@ def validate_native_tokenizer(
                     raise ValueError(f"Selection receipt does not bind current artifact: {field}")
             report["selection_receipt_sha256"] = _sha(receipt_path)
             report["receipt_scope"] = "Binds artifact identity; does not independently prove creation chronology."
-        # Validate every declared path without reading other phases. Hash all
-        # current-phase targets before starting corpus metrics.
+        # Validate every declared path without reading the other evaluation
+        # phase. Train files are separately hashed below before usage checks.
         for name in files:
             if not isinstance(name, str):
                 raise ValueError("Corpus paths must be strings")
@@ -340,12 +529,44 @@ def validate_native_tokenizer(
         gates = {"all_profiles_have_text": not missing and not empty,
                  "all_representable_roundtrips_pass": not any(v["roundtrip_failures"] for v in report["corpora"].values()),
                  "all_corpus_normalizers_match": not any(v["normalizer_failures"] for v in report["corpora"].values())}
+        settings = policy.get("corpus_thresholds", {}).get(phase, {})
+        checks = {}
+        for lang, metrics in report["corpora"].items():
+            limits = {**settings.get("default", {}), **settings.get("profiles", {}).get(lang, {})}
+            checks[lang] = {name: {"actual": metrics[_CORPUS_LIMITS[name]], "maximum": limit,
+                                  "passed": metrics[_CORPUS_LIMITS[name]] is not None
+                                  and metrics[_CORPUS_LIMITS[name]] <= limit}
+                            for name, limit in limits.items()}
+        report["corpus_threshold_checks"] = checks
+        gates["configured_release_thresholds"] = all(check["passed"] for limits in checks.values() for check in limits.values())
         report["corpus_gates"] = gates
         report["corpus_status"] = "incomplete" if missing or empty else ("passed" if all(gates.values()) else "failed")
-    report["passed"] = report["structural_passed"] and report["corpus_status"] == "passed"
-    report["status"] = "failed" if not report["structural_passed"] or report["corpus_status"] == "failed" else report["corpus_status"]
+    usage = _training_usage(selection, proc, policy["profiles"], manifest_path, files,
+                            report.get("data_manifest_sha256"))
+    # Direct probes are convenient, not exhaustive. A freshly encoded training
+    # occurrence is also a valid witness when a context-dependent piece was not
+    # selected by those probes. No stored witness or stored count is trusted.
+    for row in usage["additions"]:
+        if row["required"] and row["training_occurrences"] and row["piece"] in quality["required_unwitnessed"]:
+            quality["required_piece_witnesses"][row["piece"]] = {
+                "kind": "verified_training_usage", "native_id": row["native_id"],
+                "occurrences": row["training_occurrences"], "data_manifest_sha256": usage["data_manifest_sha256"]}
+    quality["required_unwitnessed"] = sorted(piece for piece, value in quality["required_piece_witnesses"].items() if value is None)
+    quality["gates"]["required_piece_witnesses"] = not quality["required_unwitnessed"]
+    quality["piece_checks_passed"] = all(quality["gates"].values())
+    report["training_usage"] = usage
+    report["training_usage_status"] = usage["status"]
+    report["selection_quality_gates"] = {**quality["gates"], "optional_training_usage":
+                                         None if usage["status"] == "incomplete" else usage["status"] == "passed"}
+    quality_status = "failed" if not quality["piece_checks_passed"] or usage["status"] == "failed" else usage["status"]
+    report["selection_quality_status"] = quality_status
+    statuses = ["passed" if report["structural_passed"] else "failed", report["corpus_status"], quality_status]
+    report["passed"] = all(status == "passed" for status in statuses)
+    report["status"] = "failed" if "failed" in statuses else ("passed" if report["passed"] else "incomplete")
     report["checkpoint_validated"] = report["asr_validated"] = False
     report["scope"] = "CPU tokenizer evidence; not acoustic checkpoint migration or speech accuracy. Additions may change segmentation."
-    report["corpus_unknown_policy"] = "Mixed-corpus unknowns are reported, not a hard zero gate; pinned standard alphabets are a hard gate."
+    report["corpus_unknown_policy"] = (
+        "Unknown rates and token efficiency obey explicit policy corpus_thresholds for this phase. "
+        "Unconfigured metrics remain reported only; pinned standard alphabets are a hard gate.")
     report["validator_sha256"] = _sha(Path(__file__))
     return report

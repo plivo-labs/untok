@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "untok"
-version = "0.1.0"
+version = "0.3.0"
 description = "SentencePiece Unigram tokenizers with Latin and Indic language support"
 readme = "README.md"
 license-files = ["THIRD_PARTY.md", "licenses/*.txt"]

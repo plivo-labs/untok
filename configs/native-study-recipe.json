@@ -1,0 +1,68 @@
+{
+  "schema_version": 2,
+  "name": "portable-native-study-v2",
+  "historical_byte_replay": false,
+  "jobs": [
+    "deva",
+    "bengali",
+    "gu",
+    "kn",
+    "ml",
+    "or",
+    "pa",
+    "ta",
+    "te",
+    "arabic",
+    "mni",
+    "sat"
+  ],
+  "fractions": [
+    1.0
+  ],
+  "seeds": [
+    0,
+    1
+  ],
+  "families": [
+    "fresh",
+    "donor_union"
+  ],
+  "mass_multipliers": [
+    0.8,
+    1.2
+  ],
+  "em_passes": 3,
+  "group_budgets": {
+    "deva": 1400,
+    "bengali": 500,
+    "gu": 500,
+    "kn": 500,
+    "ml": 500,
+    "or": 500,
+    "pa": 500,
+    "ta": 500,
+    "te": 500,
+    "ks": 500,
+    "ur": 500,
+    "mni": 500,
+    "sat": 500
+  },
+  "global_coverage_score": -32,
+  "shared_piece_score_resolution": "maximum persisted provider score, provisional until joint audits pass",
+  "development_tail_ratio_limit": 1.02,
+  "statistical_fitter": "untok.unigram_fit; code hash recorded at fitting and checked at merge",
+  "historical_algorithm_sources": {
+    "intake-primary.py": "241278c1319206403ec4c16225c213cc8819133e5798ae3c9868176cba96f49f",
+    "independent-intake/intake.py": "f1cc0b5bf3bc32a1229981c762ed4291f1cfef81072d3b0b01f6db6b6ee26546",
+    "freeze_data.py": "96d3c9d851032445bfa345353fd1374288b044937ead55608b7327a655a63d74",
+    "fit_frozen_banks.py": "9f65b118249be6fe5c10d097b66e03dcfd9bd36a869577b6c926b5db3769dccc",
+    "merge_native_banks.py": "d59c6aa41d2481220dcc8c38506e6b1a515d1293ffce63a29880d193989bfe03"
+  },
+  "changes_from_historical_workflow": [
+    "Explicit roots and published source/hash contracts",
+    "Cumulative annotation metadata preserved; Meta cleanup replayed from raw_text",
+    "New written split recipe and explicit optional external snapshots",
+    "Maintained fitter numerical checks; missing or altered donors fail closed",
+    "Relative freeze record identities; immutable old data not rewritten"
+  ]
+}

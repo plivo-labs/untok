@@ -1,4 +1,9 @@
-# Native Unigram candidate results
+# Historical v1 Native Unigram candidate results
+
+This page records the September 7 v1 study. Its token IDs, normalization,
+corpus metrics and checkpoint evidence do not describe the current replacement
+v3 bundles. See [v3 preservation](native-preservation.md) and
+[current language coverage](language-coverage.md) for the new artifacts.
 
 Build date: 7 September 2026. The candidate contains **20,550 native text IDs**
 and **20,552 public IDs**, including public padding and blank. It extends the
@@ -128,9 +133,10 @@ token-per-character bound against both its bank winner and the common fresh
 reference.
 
 All 6,280 optional additions occur in training, at least 3 times each, with a
-median of 435 occurrences. All approved Hindi additions occur in training.
-Another 221 required coverage pieces have no training occurrences, including
-161 rare Latin characters. They remain deliberately available and pass direct
+median of 435 occurrences. Of the 103 approved Hindi pieces, 101 occur in
+training; `ऄ` (`U+0904`) and `ॽ` (`U+097D`) have zero occurrences. In total,
+221 required coverage pieces have no training occurrences, including those two
+Hindi characters and 161 rare Latin characters. They remain available and pass direct
 encoding witnesses; this does not establish learned acoustic behavior.
 
 The reserved corpus was evaluated once after the final model, selection,

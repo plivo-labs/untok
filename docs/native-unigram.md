@@ -1,149 +1,137 @@
-# Native Unigram tokenizer
+# Native Unigram tokenizer v3
 
-This variant extends the SentencePiece Unigram model embedded in NVIDIA's
-`nemotron-3.5-asr-streaming-0.6b.nemo`. It is separate from the BPE variant built
-from NVIDIA's published `tokenizer.json`.
+All three profiles preserve original Nemotron text IDs `0..13086`, including
+complete piece messages, scores, types and normalization metadata. Profile
+filtering and cleanup apply only to appended pieces. The complete original
+multilingual bank stays in every bundle. See [the preservation contract](native-preservation.md).
 
-The native source is pinned to
-[revision 1c8deae](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/tree/1c8deaecc64b91f034d73e08dd8b64625eb3395d).
-Its tokenizer SHA256 is
-`ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291`.
+| Profile | Native text entries | Native RNNT blank | Public padding | Public blank |
+| --- | ---: | ---: | ---: | ---: |
+| `latin` | 13,573 | 13,573 | 13,087 | 13,088 |
+| `latin-indic` | 20,784 | 20,784 | 13,087 | 13,088 |
+| `full` | 20,784 | 20,784 | 13,087 | 13,088 |
 
-## Selection
+Native text IDs are dense `0..N-1`. The acoustic blank is `N`, so it moves during
+checkpoint migration while every original text ID stays fixed. Public text IDs
+reserve 13087 and 13088 for padding and blank; use the supplied conversion map.
+The current full and Latin-plus-Indic models are identical because all selected
+additions fall within the Latin-plus-Indic extension scope.
 
-The shared Devanagari bank has 1,400 selected candidates. The shared Bengali
-and Assamese bank has 500. Gujarati, Kannada, Malayalam, Odia, Punjabi,
-Tamil, Telugu, Kashmiri, Urdu, Manipuri and Santali each have 500.
+## Vocabulary and scores
 
-Required script characters count inside these budgets. The 103 approved Hindi
-pieces count inside Devanagari. Shared strings and pieces already in the native
-model do not consume additional IDs. The 190 approved rare Latin characters
-are included once globally. No new Latin multi-character pieces are introduced.
+V3 starts from the original 13,087-piece native bank and the pinned full v1
+selection. Original entries are immutable, including inherited normalization
+aliases and dominated pieces. Added strings must be unique, normalization-stable,
+non-dominated and either required coverage with witnesses or used in training.
+The validation report distinguishes inherited limitations from added-piece gates.
 
-Selection uses the original native vocabulary during fitting and pruning.
-Old scores stay fixed. New scores must stay within the native score range.
-Required pieces need encoding witnesses; optional additions need actual
-training usage. Text efficiency is measured separately on held-out data.
+Retained scores are unchanged. The native bank and independently fitted additions
+are not globally refitted. New Unicode case/decomposition characters use score
+-32. Appending pieces can change segmentation without changing original IDs.
+The native normalizer is unchanged: ZWNJ becomes space and Malayalam legacy
+chillu spellings remain distinct. Decoding returns native-normalized text.
 
-The fitter maximizes a weighted segmentation objective with a fixed total
-`sum(exp(new_score))` for additions. This anchors new scores against the
-unchanged native scores; it is not a normalized language-model probability.
-Forward-backward expected counts fit the scores, and deletion-loss pruning
-reduces the candidate inventory to the quotas. Fresh and donor-seeded pools,
-two seeds and two score-mass settings are compared on development text.
-Identical clamped settings are reported as duplicates.
-
-[Corpus preparation](native-unigram-data.md) describes the frozen training
-and evaluation sets. The `untok.unigram_fit.NativeFitter` library accepts
-explicit text records, candidate strings and scores, group memberships,
-budgets and protected pieces. It performs no downloads. Text must not already
-be SentencePiece-normalized. Supply `balance_language_source=False` when
-records already carry the frozen source weights.
-
-Candidate-pool training uses already normalized script spans and an identity
-rule to avoid applying Unicode normalization twice. That temporary training
-model is only a source of candidate strings. Final score fitting uses complete
-raw lexical records with native normalization once, and the shipped model
-retains the original native normalizer bytes.
-
-## Build and use
-
-Rebuild a candidate from its original model and scored selection:
-
-```sh
-untok build \
-  --base candidate/base-tokenizer.model \
-  --selection candidate/selection.json \
-  --output artifacts/nemotron-indic-unigram-v1
-
-untok check --bundle artifacts/nemotron-indic-unigram-v1
-```
-
-`check` verifies file hashes, preserved native metadata and the ID map.
-It does not run corpus evaluation or speech recognition tests.
-
-To run the full CPU tokenizer checks with your frozen text manifest:
-
-```sh
-untok validate \
-  --bundle artifacts/nemotron-indic-unigram-v1 \
-  --policy configs/native-unigram-validation.json \
-  --corpora /path/to/frozen-data/manifest.json \
-  --phase dev \
-  --output reports/native-unigram-dev.json
-```
-
-The self-contained policy pins the native source, normalizer, alphabets and
-protected pieces. A corpus manifest pins relative `dev/{language}.jsonl` and
-`reserve/{language}.jsonl` files by SHA256. Each row needs a `text` string;
-an optional `language` field must match the file's profile. Raw corpora are
-not distributed in the tokenizer bundle. Missing or empty profile data gives
-`incomplete` and exit code 2.
-
-The older `build-unigram`, `check-unigram` and `validate-unigram` command names
-remain aliases. Historical BPE commands require the explicit `legacy-bpe`
-prefix; see [legacy notes](legacy-bpe.md).
-
-Reserve evaluation uses `--phase reserve --selection-receipt receipt.json`.
-Before examining reserved text, freeze a receipt containing `tokenizer_sha256`,
-`data_manifest_sha256`, `bundle_manifest_sha256`, `selection_sha256` and
-`policy_sha256`. The validator rejects mismatches and omits reserve text
-examples from reports. A receipt records artifact identity; its hash alone
-does not independently prove when selection happened.
-
-Checks include actual encoding witnesses, preserved old-ID decoding, encoding
-parity on probes with no added-piece match, normalizer equality and normalized
-round trips. Unknown characters outside the declared finite coverage are
-counted explicitly. These checks do not assert identical segmentation where
-new pieces match or unchanged speech accuracy.
+## Use and rebuild
 
 ```python
-from untok.unigram import NativeTokenizerAdapter
+from untok.bundles import load_tokenizer
 
-tokenizer = NativeTokenizerAdapter("artifacts/nemotron-indic-unigram-v1")
+tokenizer = load_tokenizer("latin-indic")
 ids = tokenizer.text_to_ids("நான் office போகிறேன்")
 print(ids)
 print(tokenizer.ids_to_text(ids))
 ```
 
-These are native text IDs. For the public ID layout, use
-`text_to_public_ids()` and `public_ids_to_text()` explicitly.
+Use `text_to_public_ids()` and `public_ids_to_text()` only when the public ID
+layout is wanted. `load_tokenizer()` also accepts a custom bundle directory.
+
+From a repository checkout, reproduce the current three profiles from the
+preserved source bundle into a new directory:
+
+```sh
+untok clean --bundle src/untok/data/source --output artifacts/preserved-v3
+untok check --bundle artifacts/preserved-v3/full
+```
+
+The clean recipe verifies both source tokenizer hashes and the packaged
+extension policy. It rejects a different fitted source model. `check` verifies
+hashes, the exact cleanup recipe and ID maps; it does not run corpus or acoustic
+evaluation. An installed v3 bundle also carries the original full model and
+can be supplied to `clean` as the source.
+
+To run CPU validation against the frozen Indic corpus:
+
+```sh
+untok validate \
+  --bundle artifacts/preserved-v3/full \
+  --policy configs/clean-validation.json \
+  --corpora /path/to/frozen-data/manifest.json \
+  --phase dev \
+  --output reports/clean-v3-dev.json
+```
+
+This policy pins the current full model, source identities, finite alphabets
+and per-language thresholds. It checks the complete original prefix and appended NORMAL inventory,
+required canonical coverage and witnesses, actual training use of surviving
+optional fitted additions, and development unknowns, normalized round trips
+and token efficiency. The frozen source corpus's normalizer hash is provenance;
+v3 decoding uses that same original normalizer. Raw corpora are not packaged.
+Missing or empty profile data is incomplete validation, not a pass.
+
+Reserve evaluation requires `--phase reserve --selection-receipt receipt.json`.
+Freeze the v3 `tokenizer_sha256`, `data_manifest_sha256`,
+`bundle_manifest_sha256`, original-source `selection_sha256` and
+`policy_sha256` before evaluating it. V1 receipts cannot validate v3. The old
+reserve is already examined data, so rerunning it is a regression test rather
+than a new unseen holdout. See [language coverage](language-coverage.md) for
+current corpus results and remaining gaps.
+
+The checked-in [full-profile dev/reserve results](../configs/clean-validation-results.json),
+[selection receipt](../configs/clean-selection-receipt.json), and
+[training usage for all three profiles](../configs/clean-profile-usage.json)
+record the current artifact hashes. These are tokenizer checks, not speech
+recognition results.
 
 ## Bundle files
 
 | File | Contents |
 | --- | --- |
-| `tokenizer.model` | Extended native Unigram encoder and decoder |
-| `base-tokenizer.model` | Exact original native tokenizer |
-| `selection.json` | Ordered additions, fitted scores and provenance |
-| `vocabulary.json` | Pieces, scores, types and both ID layouts |
-| `nemo-id-map.json` | Public-to-native mapping, including RNNT blank |
-| `manifest.json` | Hashes, structural checks and validation status |
+| `tokenizer.model` | V3 Unigram vocabulary and the original normalizer |
+| `base-tokenizer.model` | Exact original NVIDIA native tokenizer |
+| `full-tokenizer.model` | Exact full v1 source tokenizer |
+| `cleanup.json` | Added-piece filtering, Unicode coverage, and inherited limitations |
+| `native-row-map.json` | Identity map for original text IDs; full-v1 added rows and acoustic blank map explicitly |
+| `nemo-id-map.json` | Public/native ID mapping and blank placement |
+| `vocabulary.json` | Pieces, scores, types and ID layouts |
+| `manifest.json` | Hashes, recipe identity and validation scope |
 
-Original native IDs `0..13086` are preserved. Public padding and blank remain
-`13087` and `13088`, so public additions start at `13089`. Native additions
-start at `13087`; native RNNT blank moves to the end of the expanded inventory.
-Padding and blank are not inserted as SentencePiece text pieces.
+The internal `data/source` bundle retains the historical selection and its
+inputs for reproducibility. It is not a fourth named public profile.
 
-## Limits
+## Historical selection and further training
 
-Normalizer 1A is unchanged, including its treatment of joiners. Source-specific
-noise annotations may be removed from corpus text before fitting; their raw
-forms and cleanup policy must be retained. Such cleaned partial transcripts
-are not automatically suitable as complete paired audio training labels.
+The original native tokenizer comes from the `.nemo` archive at NVIDIA
+[revision 1c8deae](https://huggingface.co/nvidia/nemotron-3.5-asr-streaming-0.6b/tree/1c8deaecc64b91f034d73e08dd8b64625eb3395d),
+with SHA-256 `ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291`.
+It is distinct from NVIDIA's published BPE `tokenizer.json`.
 
-Preserved IDs and scores do not guarantee unchanged segmentation where new
-pieces match, particularly in Hindi and Arabic-script text. An expanded
-checkpoint must copy and remap its existing rows and add trainable rows for
-new tokens. The tokenizer bundle alone does not perform that migration.
+The v1 study fitted new scores against fixed native scores, comparing fresh
+and donor-seeded string pools. BPE donor strings did not carry their rank scores
+or normalizers into the native Unigram model. Required characters and approved
+Hindi pieces counted inside group budgets; duplicate strings received one
+physical ID. This produced a constrained extension, with independently fitted
+banks and maximum provider score used for shared cross-bank strings.
 
-Use a matching tokenizer and checkpoint variant. Native migration now verifies
-the source pin, native tokenizer, retained weights, relocated blank and complete
-save/reload behavior. See [checkpoint usage](native-checkpoint.md) and
-[compatibility results](native-compatibility-results.md) for the Full, Latin and
-Latin-plus-Indic variants and their paired offline/streaming controls.
+[Historical results](native-unigram-results.md) document that study, including
+its old normalizer and old IDs. [Corpus preparation](native-unigram-data.md)
+describes its frozen data. [Reproduction](native-reproduction.md) supplies
+portable acquisition, preparation, fitting and merge scripts for a new study;
+a newly fitted model does not automatically satisfy the pinned v3 cleanup recipe.
+`untok build` reconstructs the original append-only format from a base and
+selection. The older `build-unigram`, `check-unigram` and `validate-unigram`
+names remain aliases. Historical BPE commands use the `legacy-bpe` prefix.
 
-The current validation scope excludes acoustic training. A future trained
-release would need a separately scoped speech corpus, training recipe and
-held-out WER/CER evaluation. Text coverage and migration compatibility do not
-establish learned recognition accuracy for newly added languages.
+The tokenizer does not teach a model acoustic meanings for new pieces.
+[Checkpoint migration](native-checkpoint.md), speech fine-tuning and held-out
+WER/CER evaluation are separate requirements. Historical v1 migration and audio
+checks do not establish v3 checkpoint compatibility or speech accuracy.

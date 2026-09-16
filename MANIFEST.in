@@ -1,0 +1,4 @@
+recursive-include configs *.json *.tsv
+recursive-include docs *.md
+recursive-include scripts *.py *.sh
+global-exclude __pycache__ *.py[cod]

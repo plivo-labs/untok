@@ -147,6 +147,20 @@ def test_package_dispatches_all_three_profiles(monkeypatch, capsys):
     assert json.loads(capsys.readouterr().out)["packaged"]
 
 
+def test_clean_command_builds_versioned_profiles(monkeypatch, capsys):
+    import untok.clean as clean
+
+    calls = []
+    def build(*args):
+        calls.append(args)
+        return {"full": {"tokenizer_version": 3}}
+
+    monkeypatch.setattr(clean, "build_clean_bundles", build)
+    assert main(["clean", "--bundle", "source", "--output", "cleaned"]) == 0
+    assert calls == [("source", "cleaned")]
+    assert json.loads(capsys.readouterr().out)["full"]["tokenizer_version"] == 3
+
+
 def test_native_migration_requires_source_pin_and_dispatches_native(monkeypatch, capsys):
     import untok.native_checkpoint as native
     import untok.checkpoint as legacy

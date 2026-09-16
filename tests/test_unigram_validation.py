@@ -1,4 +1,5 @@
 import hashlib
+from importlib import resources
 import json
 from pathlib import Path
 
@@ -44,13 +45,13 @@ def candidate(tmp_path):
                    "normalizer_probes": ["", "a", "  a  b  ", "\ta\nb", "ﬁ", "क्\u200cष"],
                    "exact_encoding_probes": ["a"]})
     data = tmp_path / "data" / "manifest.json"
-    for phase in ("dev", "reserve"):
+    for phase in ("train", "dev", "reserve"):
         path = data.parent / phase / "x.jsonl"
         path.parent.mkdir(parents=True)
         path.write_text('\n'.join(json.dumps({"text": text, "source": "toy", "record_id": str(i)}, ensure_ascii=False)
                                   for i, text in enumerate(["ab", "  a  b  ", "xy"])) + '\n')
     write(data, {"native_base_sha256": sha(base), "normalizer_sha256": info["normalizer_sha256"],
-                 "files": {f"{phase}/x.jsonl": sha(data.parent / phase / "x.jsonl") for phase in ("dev", "reserve")}})
+                 "files": {f"{phase}/x.jsonl": sha(data.parent / phase / "x.jsonl") for phase in ("train", "dev", "reserve")}})
     return bundle, policy, data
 
 
@@ -72,6 +73,7 @@ def test_portable_validation_and_known_segmentation_changes(candidate, tmp_path,
     result = validate_native_tokenizer(*candidate, max_examples=1)
     assert result["passed"] and result["status"] == "passed"
     assert result["structural_passed"] and result["corpus_status"] == "passed"
+    assert result["selection_quality_status"] == result["training_usage_status"] == "passed"
     assert result["corpora"]["x"]["base_representable_changed"] == 1
     assert result["corpora"]["x"]["unknown_records"] == 1
     assert result["corpora"]["x"]["unknown_codepoint_occurrences"] == 2
@@ -223,3 +225,148 @@ def test_hash_valid_wrong_language_file_rejected(candidate):
     change(data, lambda obj: obj["files"].update({"dev/x.jsonl": sha(text)}))
     with pytest.raises(ValueError, match="language disagrees with profile x"):
         validate_native_tokenizer(*candidate)
+
+
+def rebuild(candidate, tmp_path, mutate):
+    bundle, policy, data = candidate
+    selection = tmp_path / "changed-selection.json"
+    obj = json.loads((bundle / "selection.json").read_text())
+    mutate(obj)
+    write(selection, obj)
+    output = tmp_path / "changed-bundle"
+    build_native_tokenizer(bundle / "base-tokenizer.model", selection, output)
+    return output, policy, data
+
+
+def test_unused_optional_piece_rejects_fabricated_training_count(candidate, tmp_path):
+    revised = rebuild(candidate, tmp_path, lambda obj: obj["additions"].append(
+        {"piece": "az", "score": -1, "training_occurrences": 999}))
+    result = validate_native_tokenizer(*revised)
+    assert result["structural_passed"] and result["corpus_status"] == "passed"
+    assert result["selection_quality_status"] == result["training_usage_status"] == "failed"
+    assert result["training_usage"]["optional_unused"] == ["az"]
+    assert result["training_usage"]["declared_count_mismatches"] == ["az"]
+
+
+def test_all_required_pieces_need_fresh_witnesses_even_outside_protected_groups(candidate, tmp_path):
+    revised = rebuild(candidate, tmp_path, lambda obj: obj["additions"].append(
+        {"piece": "aa", "score": -8, "required_reasons": [{"kind": "alphabet"}],
+         "required_encoding_witness": {"input": "aa", "native_id": 6}}))
+    result = validate_native_tokenizer(*revised)
+    assert result["protected_piece_groups"]["new"]["passed"]
+    assert result["selection_quality"]["required_unwitnessed"] == ["aa"]
+    assert result["selection_quality"]["strictly_dominated_additions"][0]["best_split"] == ["a", "a"]
+    assert result["selection_quality_status"] == "failed"
+
+
+def test_required_coverage_piece_may_be_unused_in_training(candidate, tmp_path):
+    revised = rebuild(candidate, tmp_path, lambda obj: obj["additions"].append(
+        {"piece": "az", "score": -1, "required_reasons": [{"kind": "alphabet"}]}))
+    result = validate_native_tokenizer(*revised)
+    assert result["passed"]
+    assert result["selection_quality"]["required_piece_witnesses"]["az"] is not None
+    assert result["training_usage"]["required_unused"] == ["az"]
+
+
+def test_missing_training_keeps_structure_and_corpus_status_separate(candidate):
+    change(candidate[2], lambda obj: obj["files"].pop("train/x.jsonl"))
+    result = validate_native_tokenizer(*candidate)
+    assert result["structural_passed"] and result["corpus_status"] == "passed"
+    assert result["training_usage_status"] == result["selection_quality_status"] == "incomplete"
+    assert result["selection_quality_gates"]["optional_training_usage"] is None
+    assert result["status"] == "incomplete" and not result["passed"]
+
+
+def test_training_manifest_cannot_replace_selection_pinned_manifest(candidate, tmp_path, monkeypatch):
+    revised = rebuild(candidate, tmp_path, lambda obj: obj.update({"data_manifest_sha256": "wrong"}))
+    original = Path.open
+    def guard(self, *args, **kwargs):
+        assert self.parent.name != "train", "Read unrelated training corpus"
+        return original(self, *args, **kwargs)
+    monkeypatch.setattr(Path, "open", guard)
+    result = validate_native_tokenizer(*revised)
+    assert result["corpus_status"] == "passed"
+    assert result["selection_quality_status"] == "incomplete"
+    assert not result["training_usage"]["selection_manifest_matches"]
+
+
+def test_training_file_hash_is_verified_before_encoding(candidate):
+    change(candidate[2], lambda obj: obj["files"].update({"train/x.jsonl": "wrong"}))
+    with pytest.raises(ValueError, match="Training corpus integrity"):
+        validate_native_tokenizer(*candidate)
+
+
+@pytest.mark.parametrize("limits", [
+    {"max_unknown_records": 0}, {"max_unknown_tokens": 0},
+    {"max_unknown_record_rate": 0}, {"max_unknown_token_rate": 0},
+    {"max_mean_tokens_per_normalized_character": .01}, {"max_tokens_p95": 1}, {"max_tokens_p99": 1},
+])
+def test_explicit_unknown_and_efficiency_thresholds_are_release_gates(candidate, limits):
+    change(candidate[1], lambda obj: obj.update({"corpus_thresholds": {"dev": {"default": limits}}}))
+    result = validate_native_tokenizer(*candidate)
+    assert result["corpus_status"] == "failed" and not result["passed"]
+    assert not result["corpus_gates"]["configured_release_thresholds"]
+    assert result["selection_quality_status"] == "passed"
+
+
+def test_per_profile_thresholds_override_defaults_at_inclusive_boundary(candidate):
+    change(candidate[1], lambda obj: obj.update({"corpus_thresholds": {"dev": {
+        "default": {"max_unknown_records": 0}, "profiles": {"x": {"max_unknown_records": 1}}}}}))
+    assert validate_native_tokenizer(*candidate)["passed"]
+
+
+@pytest.mark.parametrize("limit", [-1, True, float("inf"), "0"])
+def test_invalid_thresholds_rejected(candidate, limit):
+    change(candidate[1], lambda obj: obj.update({"corpus_thresholds": {"dev": {
+        "default": {"max_unknown_records": limit}}}}))
+    with pytest.raises(ValueError, match="corpus threshold"):
+        validate_native_tokenizer(*candidate)
+
+
+def test_boundary_marker_is_not_a_normalization_alias(candidate, tmp_path):
+    revised = rebuild(candidate, tmp_path, lambda obj: obj["additions"].append(
+        {"piece": "▁ab", "score": -1, "required_reasons": [{"kind": "boundary"}]}))
+    result = validate_native_tokenizer(*revised)
+    assert not result["selection_quality"]["normalization_aliases"]
+    assert not result["selection_quality"]["normalization_failures"]
+
+
+def test_equal_score_split_is_not_strict_dominance(candidate, tmp_path):
+    revised = rebuild(candidate, tmp_path, lambda obj: obj["additions"].append(
+        {"piece": "aa", "score": -4, "required_reasons": [{"kind": "coverage"}]}))
+    result = validate_native_tokenizer(*revised)
+    assert not result["selection_quality"]["strictly_dominated_additions"]
+
+
+@pytest.mark.parametrize("piece,normalized,alias", [("क़", "क़", False), ("ｆｉ", "fi", True)])
+def test_normalization_dead_addition_is_rejected(tmp_path, piece, normalized, alias):
+    """The exact क़ release-audit reproduction must fail without needing a corpus."""
+    root = Path(__file__).resolve().parents[1]
+    original = resources.files("untok").joinpath("data", "source")
+    selection = json.loads((original / "selection.json").read_text())
+    selection["additions"].append({"piece": piece, "score": -10, "training_occurrences": 123})
+    selected = tmp_path / "selection.json"
+    write(selected, selection)
+    bundle = tmp_path / "bundle"
+    build_native_tokenizer(original / "base-tokenizer.model", selected, bundle)
+    policy = json.loads((root / "configs/native-unigram-validation.json").read_text())
+    if alias:
+        policy["approved_new_latin_pieces"].append(piece)
+    policy_path = tmp_path / "policy.json"
+    write(policy_path, policy)
+    result = validate_native_tokenizer(bundle, policy_path)
+    assert result["structural_passed"]
+    assert result["selection_quality_status"] == result["status"] == "failed"
+    assert result["selection_quality"]["normalization_failures"] == [
+        {"native_id": 20550, "piece": piece, "normalized": normalized}]
+    assert bool(result["selection_quality"]["normalization_aliases"]) == alias
+
+
+def test_shipped_additions_pass_all_static_quality_checks_without_training_claims():
+    root = Path(__file__).resolve().parents[1]
+    result = validate_native_tokenizer(resources.files("untok").joinpath("data", "source"), root / "configs/native-unigram-validation.json")
+    assert result["selection_quality"]["static_passed"]
+    assert result["selection_quality"]["new_piece_count"] == 7463
+    assert result["selection_quality"]["required_piece_count"] == 1183
+    assert result["training_usage_status"] == "incomplete"
+    assert result["selection_quality_status"] == "incomplete"

@@ -1,6 +1,7 @@
 """Native full/subset row transfer, retained logits and fail-closed migration inputs."""
 import copy
 import hashlib
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -10,7 +11,7 @@ from sentencepiece import sentencepiece_model_pb2 as pb
 from untok.checkpoint import inspect_nemo_layout
 from untok.native_checkpoint import (
     _prompt_registry, compare_retained_logits, initialize_native_added_rows,
-    retained_row_pairs, transfer_native_state_dict, validate_source_native_tokenizer,
+    retained_row_pairs, select_source_native_inventory, transfer_native_state_dict, validate_source_native_tokenizer,
     verify_native_state_transfer,
 )
 
@@ -194,3 +195,136 @@ def test_prompt_registry_keeps_old_slots_and_requires_all_22_targets():
     wrong = SimpleNamespace(num_prompts=64, prompt_dictionary={"auto": 0, "en-US": 1, "hi-IN": 3})
     with pytest.raises(ValueError, match="different pinned processor"):
         _prompt_registry(wrong, registry)
+
+
+@pytest.fixture(scope="module")
+def clean_checkpoint_bundles(tmp_path_factory):
+    """Use the real preserved v3 recipe while keeping acoustic weights wholly synthetic."""
+    pytest.importorskip("torch")
+    from untok.bundles import PROFILES, load_tokenizer_bundle
+    from untok.clean import build_clean_bundles
+
+    data = Path(__file__).resolve().parents[1] / "src" / "untok" / "data"
+    output = tmp_path_factory.mktemp("clean-checkpoint-bundles")
+    build_clean_bundles(data / "source", output)
+    return {profile: load_tokenizer_bundle(output / profile) for profile in PROFILES}
+
+
+@pytest.mark.parametrize("profile", ["full", "latin-indic", "latin"])
+@pytest.mark.parametrize("source_inventory", ["original_native_base", "original_untok_full_v1"])
+def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
+    clean_checkpoint_bundles, tmp_path, profile, source_inventory,
+):
+    torch = pytest.importorskip("torch")
+    adapter = clean_checkpoint_bundles[profile]
+    is_base = source_inventory == "original_native_base"
+    source_bytes = adapter.base_model_bytes if is_base else adapter.full_model_bytes
+    source_processor = spm.SentencePieceProcessor(model_proto=source_bytes)
+    mapping = adapter.source_native_to_target_native if is_base else adapter.full_native_to_subset_native
+    torch.manual_seed(823)
+    source, target = toy_model(source_processor.get_piece_size()), toy_model(adapter.vocab_size)
+    source.tokenizer = SimpleNamespace(
+        backend=source_processor, vocab_size=source_processor.get_piece_size(),
+        ids_to_tokens=lambda ids: [source_processor.id_to_piece(index) for index in ids],
+        text_to_ids=lambda text: source_processor.encode(text, out_type=int),
+    )
+    selected_inventory, selected_mapping, source_check = select_source_native_inventory(source, adapter)
+    assert selected_inventory == source_inventory and selected_mapping == mapping
+    assert source_check["native_tokenizer_sha256"] == hashlib.sha256(source_bytes).hexdigest()
+    old, new = inspect_nemo_layout(source), inspect_nemo_layout(target)
+    retained = [index for index, dest in enumerate(mapping) if dest is not None]
+    removed = [index for index, dest in enumerate(mapping) if dest is None]
+    assert old.blank_id != new.blank_id
+    if is_base:
+        assert not removed
+        assert mapping[:-1] == tuple(range(old.blank_id))
+    assert mapping[old.blank_id] == new.blank_id
+
+    # Mark removed rows with conspicuous values so an initializer accidentally
+    # averaging them cannot pass. Every retained text row remains distinguishable.
+    with torch.no_grad():
+        embedding = source.decoder.prediction["embed"].weight
+        embedding.copy_(torch.arange(embedding.numel()).reshape_as(embedding) / embedding.numel())
+        embedding[removed] = 10_000
+        embedding[old.blank_id] = 0
+        source.joint.joint_net[-1].weight[removed] = 20_000
+        source.joint.joint_net[-1].bias[removed] = 30_000
+    original = copy.deepcopy(source.state_dict())
+    initial, policy = initialize_native_added_rows(original, target.state_dict(), old, new, mapping)
+    additions = policy["new_model_rows"]
+    assert set(additions) == set(range(new.output_size)) - {mapping[index] for index in retained}
+    assert adapter.token_to_id("Ð") in additions
+    # ID 13087 was the original blank but denotes '#' in the v1 extension:
+    # migration from the base must initialize that text row, not copy blank to it.
+    assert (adapter.token_to_id("#") in additions) == is_base
+    assert adapter.token_to_id("#") != new.blank_id
+    expected_mean = original[old.embedding_key][retained[:-1]].double().mean(0).float()
+    assert torch.equal(initial[new.embedding_key][additions], expected_mean.expand(len(additions), -1))
+    assert torch.equal(
+        initial[new.output_weight_key][additions],
+        original[old.output_weight_key][old.blank_id].expand(len(additions), -1),
+    )
+    assert torch.all(initial[new.output_bias_key][additions] < original[old.output_bias_key][old.blank_id])
+    expected_new = {key: initial[key][additions].clone() for key in new.row_keys}
+
+    target.load_state_dict(transfer_native_state_dict(original, initial, old, new, mapping))
+    migrated = target.state_dict()
+    report = verify_native_state_transfer(original, migrated, old, new, mapping)
+    assert report["removed_source_text_rows"] == len(removed)
+    assert report["learned_values_omitted"] == sum(original[key][removed].numel() for key in old.row_keys)
+    assert report["all_source_values_preserved"] == (not removed)
+    assert policy["removed_source_model_rows"] == removed
+    for key in old.row_keys:
+        assert torch.equal(migrated[key][[mapping[index] for index in retained]], original[key][retained])
+        assert torch.equal(migrated[key][new.blank_id], original[key][old.blank_id])
+        assert torch.equal(migrated[key][additions], expected_new[key])
+    for key in set(original) - set(old.row_keys):
+        assert torch.equal(migrated[key], original[key])
+    assert all(torch.equal(original[key], value) for key, value in source.state_dict().items())
+
+    # Verify retained prediction prefixes and raw logits with the real compact
+    # map; removed logits and changed softmax denominators are not compared.
+    old_prefix = torch.tensor([[old.blank_id, *retained[:3], retained[2]]])
+    new_prefix = torch.tensor([[mapping[index] for index in old_prefix[0].tolist()]])
+    features = torch.randn(1, old_prefix.shape[1], 4)
+
+    def forward(model, prefix):
+        predicted, _ = model.decoder.prediction["rnn"](model.decoder.prediction["embed"](prefix))
+        return model.joint.joint_net(model.encoder(features) + predicted)
+
+    assert compare_retained_logits(forward(source, old_prefix), forward(target, new_prefix), old, new, mapping)["passed"]
+
+    # A tensor state round trip checks these rows survive serialization. This is
+    # deliberately not a NeMo .nemo restoration or an acoustic-quality test.
+    saved = tmp_path / "synthetic-clean-state.pt"
+    torch.save(migrated, saved)
+    restored = torch.load(saved, weights_only=True)
+    assert verify_native_state_transfer(original, restored, old, new, mapping)["passed"]
+    assert all(torch.equal(restored[key][additions], expected_new[key]) for key in new.row_keys)
+
+
+def test_clean_source_inventory_selection_rejects_wrong_bytes_and_encoding(clean_checkpoint_bundles):
+    adapter = clean_checkpoint_bundles["full"]
+
+    def source_for(raw):
+        processor = spm.SentencePieceProcessor(model_proto=raw)
+        return SimpleNamespace(tokenizer=SimpleNamespace(
+            backend=processor, vocab_size=processor.get_piece_size(),
+            ids_to_tokens=lambda ids: [processor.id_to_piece(index) for index in ids],
+            text_to_ids=lambda text: processor.encode(text, out_type=int),
+        ))
+
+    altered = pb.ModelProto()
+    altered.ParseFromString(adapter.full_model_bytes)
+    altered.pieces[2].score -= 0.25
+    for raw in (altered.SerializeToString(), adapter.model_bytes):
+        with pytest.raises(ValueError, match="not a pinned"):
+            select_source_native_inventory(source_for(raw), adapter)
+    source = source_for(adapter.full_model_bytes)
+    source.tokenizer.text_to_ids = lambda text: [2]
+    with pytest.raises(ValueError, match="wrapper encoding"):
+        select_source_native_inventory(source, adapter)
+    source = source_for(adapter.base_model_bytes)
+    source.tokenizer.vocab_size += 1
+    with pytest.raises(ValueError, match="vocabulary size"):
+        select_source_native_inventory(source, adapter)

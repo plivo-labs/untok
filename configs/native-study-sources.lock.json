@@ -1,0 +1,498 @@
+{
+  "files": [
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/as.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "4371952807f7378dd07253e6ccc4007cecd6927952b4a09abce68760c3f96511",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/as_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/bn.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "2635df3cbda9e9dc2b71145141478c0d45f8acda657692693d1854fc2e46045e",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/bn_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/brx.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "ca58c812c596f212a0dfcad1a3a5afe869e208497b89751622e6dc29ae8861e4",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/brx_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/doi.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "286eb07f44cf58b778ada00cf90b7ead56763af107b0032de397182620411309",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/doi_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/gu.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "4e1148e4cc113b26f075960adfeb2a875806ffed7b70571c8de673680df24297",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/gu_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/hi.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "e6b66ffd63ffdf4700680297aea6d477f33f59e78354c4b7c72d3337396c8efd",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/hi_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/kn.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "8f898792f7ce5ca19d9e0588a7d6cb8889a4e95fd10207228f7823cdb3905bdd",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/kn_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/kok.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "17ba3194ea4dc4926d7339e7ff1ef5f6c1c849d9a48174662917d091ddbbf8bf",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/kok_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/ks.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "eb070f56dd4b8239f8dacb17a99ef1933eccf62c785ddad21d8588f1ec2af213",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/ks_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/mai.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "5a1eeae3a0bf3d8eb6a71f2fd5b9a2650572387993538bdadbd828ad11129ba0",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/mai_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/ml.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "87b88c9e54326e4cfcbb1c16d3258ec54f3d970b93aa3def9ac4d2c914e891cb",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/ml_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/mni.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "8eff02ebdf71a3a6110e17d6b5cbddc4a8eb6cc76aa885515f5cc132b53e5d66",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/mni_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/mr.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "45462af2e805cbcacce8715df67e3bf6806a0f69303a6fde5f23db26b781c5b1",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/mr_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/ne.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "441979921c460476a11f67c775a44a7f956df5d2beb6a260bf2f94a6c3eaf64e",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/ne_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/or.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "98de4084ada7c75e4e7df8c043fa19e3ff2822d3c0ca4a4739bbc2c1de6f4113",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/or_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/pa.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "a4d3d0bb69c2e25f37aac9dab1975302da4b9fc82d29d17724d26d313d21c86b",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/pa_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/sa.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "93b075649353443ee158386199b8765cb9deeb1541771cfef4eac31283cf12dd",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/sa_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/sat.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "72e29e96aaafc65e7d065511d3eaf0a275c8a81858f4aaf223787927ca7faf05",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/sat_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/sd.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "c0ea66172eed631c2b9db095265bb44a1fe72e92b4435a986e9f1d5848aabca7",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/sd_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/ta.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "aa3d0faad52f823fbde45f10be5104dd96cf42670d27bbadefb9d64638c6dddf",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/ta_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/te.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "d7f03945b4c14de3ebdf57e7657a185cddd220ffb19dc12c8b4d4191b93ddfb5",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/te_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "AI4Bharat",
+      "path": "donors/ur.model",
+      "revision": "d50726d3123bc5066994b94bf6c0cfbc5ab961d8",
+      "sha256": "ff52e01271f37fd87976b04c4757a55ba5e9b390a7192566ac1f66872456e439",
+      "url": "https://raw.githubusercontent.com/AI4Bharat/IndicVoices/d50726d3123bc5066994b94bf6c0cfbc5ab961d8/artifacts/tokenizers/ur_256/tokenizer_spe_bpe_v256/tokenizer.model"
+    },
+    {
+      "owner": "Unicode",
+      "path": "unicode/Scripts.txt",
+      "revision": "17.0.0",
+      "sha256": "9f5e50d3abaee7d6ce09480f325c706f485ae3240912527e651954d2d6b035bf",
+      "url": "https://www.unicode.org/Public/17.0.0/ucd/Scripts.txt"
+    },
+    {
+      "owner": "Unicode",
+      "path": "unicode/UnicodeData.txt",
+      "revision": "17.0.0",
+      "sha256": "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c",
+      "url": "https://www.unicode.org/Public/17.0.0/ucd/UnicodeData.txt"
+    },
+    {
+      "path": "cldr/bn.xml",
+      "purpose": "CLDR48 standard exemplar coverage",
+      "sha256": "bac59264993110a47ca53b92357352bdc23f2ca0a9bb66ec48609c4c174ef68b",
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/main/bn.xml"
+    },
+    {
+      "path": "cldr/kn.xml",
+      "purpose": "CLDR48 standard exemplar coverage",
+      "sha256": "913971145002f04c35fa0f8a439c11be7d761d5fc766462f8f829c2541a392af",
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/main/kn.xml"
+    },
+    {
+      "path": "cldr/te.xml",
+      "purpose": "CLDR48 standard exemplar coverage",
+      "sha256": "d429759810b8f472242ca348eeabf8541da7c48c56c81bd43ec5009790efba9a",
+      "url": "https://raw.githubusercontent.com/unicode-org/cldr/acd6d88ae493633240e19a87a721076a8a75c310/common/main/te.xml"
+    },
+    {
+      "path": "donors/IndicBARTSS.model",
+      "revision": "4b2669d25bc24a46ad2501c2b759451b7a4a1a26",
+      "sha256": "27d922f1b9444ae05eab57f3f0a9d60d4147e905a160f07c3b08116e7b3b8c6a",
+      "url": "https://huggingface.co/ai4bharat/IndicBARTSS/resolve/4b2669d25bc24a46ad2501c2b759451b7a4a1a26/spiece.model"
+    },
+    {
+      "path": "donors/IndicBART.model",
+      "revision": "78466a0c0e29f9229f7005623ecd6bc4243c0ae0",
+      "sha256": "9d924c4e4e0d7a073e8289c20e29cd27657629064f2571fb18ab82008cf79a72",
+      "url": "https://huggingface.co/ai4bharat/IndicBART/resolve/78466a0c0e29f9229f7005623ecd6bc4243c0ae0/spiece.model"
+    },
+    {
+      "path": "bhasha.zip",
+      "url": "https://github.com/AI4Bharat/IndicLID/releases/download/v1.0/bhasha-abhijnaanam_test_set.zip",
+      "sha256": "be4bd82c5b9b54528393bcbf4542a4f7f2ac9ee4fc1a3609f0ed685a1d252c19",
+      "owner": "AI4Bharat",
+      "revision": "v1.0"
+    }
+  ],
+  "schema_version": 1,
+  "datasets": [
+    {
+      "repository": "ai4bharat/IndicVoices",
+      "revision": "c96f9088f138cf89d419da7e8e643e1f05c00a87",
+      "acquisition": "intake_primary.py: pinned parquet byte ranges, existing HF access required"
+    },
+    {
+      "repository": "facebook/omnilingual-asr-corpus",
+      "revision": "8648ba8946377697b427ae952076e49fc0e5e44d",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "ASLP-lab/UrduSpeech",
+      "revision": "16dd380cfd9049a3db7f06a98e878086916bf833",
+      "acquisition": "intake_independent.py: pinned transcript manifests"
+    },
+    {
+      "repository": "ai4bharat/IndicCorpV2",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "acquisition": "intake_written.py: bounded first 2000 nonempty lines"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Assamese_R1",
+      "revision": "996bfa4853d1d392254e61d0ac900f5e3f2f8465",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Tamil_R1",
+      "revision": "3931b31eaa37449c263d380fd215b18c36558846",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Bengali_R1",
+      "revision": "84a3fb13194b7646ec2a3071bf7e83840461acbc",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Gujarati_R1",
+      "revision": "6cbbaf73ba99c7afbc78fd589e2cebda74959746",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Kannada_R1",
+      "revision": "bd9e8f130d19353ebee691fddf34ac5f99143416",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Malayalam_R1",
+      "revision": "0843a854a60a1264bf42b1a869ddc85890f19bb1",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Marathi_R1",
+      "revision": "a3eded7ad3104f4a294937e5078ef7a254360ac7",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Odia_R1",
+      "revision": "0aee5fd987bf1fc897629a82ce9c328600652999",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    },
+    {
+      "repository": "SPRINGLab/SPRING_INX_Punjabi_R1",
+      "revision": "97e5f36fce3e24b0ddad726728d1cc4506c24476",
+      "acquisition": "intake_independent.py: viewer requires matching default revision"
+    }
+  ],
+  "native_base": {
+    "repository": "nvidia/nemotron-3.5-asr-streaming-0.6b",
+    "revision": "1c8deaecc64b91f034d73e08dd8b64625eb3395d",
+    "checkpoint_file": "nemotron-3.5-asr-streaming-0.6b.nemo",
+    "checkpoint_sha256": "210214ed94039bf6bfbb9a047c7fa289628db75b103e2bf6381fa78285436a74",
+    "tokenizer_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+    "normalizer_sha256": "fca0e7752aef7e68c02391ae85821eeb71e1b299cd72f91ebd0b4e7bf020bc42",
+    "packaged_path": "src/untok/data/full/base-tokenizer.model"
+  },
+  "written_prefixes": [
+    {
+      "language": "as",
+      "path": "indiccorp-as-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/as.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "29551cbca777c59579a14cf844df4c1fa8835fb17ef9df2b0490d9c9e03a38a3",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "bn",
+      "path": "indiccorp-bn-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/bn.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "99baba2d9816dfa42f85b593c394c2b4b66cc59549e20373cb1ddab9fcf4b085",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "brx",
+      "path": "indiccorp-brx-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/bd.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "8077b65ba6748c49b8a5d126bd1cb1bc46a6f9883693d54a0c4affd11d117762",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "doi",
+      "path": "indiccorp-doi-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/dg.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "19c26b1f47dac797be3f94bc1ad7a4252888825400feafbb890fb24c88b093cd",
+      "bytes": 1417459,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "gu",
+      "path": "indiccorp-gu-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/gu.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "f9ce8b374253b98a132de89909321e69db970b3b0d70d1a26924e5c7ba183eb3",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "hi",
+      "path": "indiccorp-hi-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/hi-1.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "6fc04688e7fbc13fc7d747b658a3605352a3f3af028b11480bb63134fd9cc2f9",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "kn",
+      "path": "indiccorp-kn-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/kn.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "2d9f88259d32cc5876b430b4a0f4a51fa9c757b7ea492a481eea3fb19a519cc5",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "kok",
+      "path": "indiccorp-kok-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/gom.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "a32af388b5d8233c032596ffb8df0dd5b539cbf00a950ac24437be49f22b6f28",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "ks",
+      "path": "indiccorp-ks-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/ks.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "9917e14967f0ab6b6bf033eaab08828c7693731c3995fae9cafb2b5aeaedae63",
+      "bytes": 693894,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "mai",
+      "path": "indiccorp-mai-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/mai.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "b76bebfb42e409053537a3a09d86f1f81c3a00d124497083b4b67b7ff00f797c",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "ml",
+      "path": "indiccorp-ml-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/ml.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "acb50d64f2ed477a3f8ca2c2d1ec6a608c738e7d6cc38e54836a6d64236938c1",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "mni",
+      "path": "indiccorp-mni-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/mni.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "037699595052284507c6f947691809c59015fc75daec090bbd09ac769b4107c6",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "mr",
+      "path": "indiccorp-mr-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/mr.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "c97dd4d8919fabe0859fbc440ef41ee619c353b07ad70d45b2817016fb645c17",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "ne",
+      "path": "indiccorp-ne-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/ne.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "dbe758428a3d345529d5607470565c848c0677adccbdb415f5baf64135725508",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "or",
+      "path": "indiccorp-or-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/or.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "d5defcdaa01e4e93edb06fe02ea8c08487c691c2753ef14deb6858106a8eb573",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "pa",
+      "path": "indiccorp-pa-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/pa.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "01a2b03166c760a476c70117d8c77afda8d86e48b61ae5ae84ecf5f1382a4acb",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "sa",
+      "path": "indiccorp-sa-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/sa.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "ebee86d4708b3a04d2ebea62d46610fdfe6c5238b15117a5bddf29d4c4498a11",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "sat",
+      "path": "indiccorp-sat-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/sat.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "e71f17b414b82f1ad10f8a9b842453359f3a136acfa4a4841b263ad65c855001",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "ta",
+      "path": "indiccorp-ta-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/ta.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "2195ba19bb3b46b33c8a9265bc5634bf07746117e372742818f1a6ad3af8e805",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "te",
+      "path": "indiccorp-te-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/te.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "1843ea8004f2f9411e002cdfac2604efaac4c53b93c636066e621857f896d77c",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    },
+    {
+      "language": "ur",
+      "path": "indiccorp-ur-prefix.bin",
+      "url": "https://huggingface.co/datasets/ai4bharat/IndicCorpV2/resolve/2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f/data/ur.txt",
+      "revision": "2d7285e6ce14fdb3fb2449c9f89427b9f582ac3f",
+      "sha256": "be5972b8c8e4658e03ae4ff17289d2cf4adea6b2fd5f489e8a6fa7dc9194830e",
+      "bytes": 8388608,
+      "range": "bytes=0-8388607",
+      "nonempty_complete_lines": 2000
+    }
+  ]
+}

@@ -180,6 +180,28 @@ def validate_source_native_tokenizer(model, base_bytes):
             "piece_ids_checked": processor.get_piece_size(), "encoding_probes_checked": len(probes)}
 
 
+def select_source_native_inventory(model, adapter):
+    """Select an exact pinned inventory, never infer its IDs from tensor size.
+
+    The preserved v3 recipe carries both its original NVIDIA base and the complete
+    v1 Untok model. A checkpoint trained against either can supply learned rows;
+    unrelated, already-clean, and merely same-sized tokenizers are rejected.
+    """
+    from .clean import CleanTokenizerAdapter
+
+    candidates = [("original_native_base", adapter.base_model_bytes,
+                   adapter.source_native_to_target_native)]
+    if isinstance(adapter, CleanTokenizerAdapter):
+        candidates.append(("original_untok_full_v1", adapter.full_model_bytes,
+                           adapter.full_native_to_subset_native))
+    actual = _source_native_bytes(model)
+    for inventory, expected, mapping in candidates:
+        if actual == expected:
+            checked = validate_source_native_tokenizer(model, expected)
+            return inventory, tuple(mapping), checked
+    raise ValueError("Restored source tokenizer is not a pinned original native base or supported full v1 inventory")
+
+
 def _prompt_registry(model_defaults, supplied=None):
     from .prompts import TARGET_LOCALES, extend_prompt_registry
 
@@ -198,18 +220,19 @@ def _prompt_registry(model_defaults, supplied=None):
 
 def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256, seed=0,
                               prompt_registry=None, max_new_mass_ratio=1e-6):
-    """Migrate a pinned original .nemo into a full or reduced native bundle.
+    """Migrate a pinned .nemo into a full, reduced, or clean native bundle.
 
-    Reduced bundles intentionally omit selected original vocabulary rows. The
-    original acoustic network and every retained row remain byte-equal, while
-    segmentation, softmaxes and speech accuracy still require separate checks.
+    Preserved v3 accepts the original NVIDIA base or its exact full Untok v1
+    tokenizer. Reduced and clean bundles intentionally omit selected rows. The
+    acoustic network and every retained row remain byte-equal, while changed
+    labels, softmaxes and speech accuracy still require separate checks.
     """
     from .bundles import load_tokenizer_bundle
 
     torch = _torch()
     source, bundle, output = Path(source), Path(bundle).resolve(), Path(output)
     if not source.is_file() or source.suffix != ".nemo":
-        raise ValueError("Provide the complete local original .nemo checkpoint")
+        raise ValueError("Provide a complete local source .nemo checkpoint")
     if (not isinstance(expected_source_sha256, str) or len(expected_source_sha256) != 64
             or any(c not in "0123456789abcdef" for c in expected_source_sha256)
             or _sha256(source) != expected_source_sha256):
@@ -219,7 +242,10 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         raise ValueError("Checkpoint and migration report require new output paths")
     adapter = load_tokenizer_bundle(bundle)
     tokenizer_cfg = native_bundle_config(bundle)
-    source_to_target = tuple(adapter.source_native_to_target_native)
+    base_to_target = tuple(adapter.source_native_to_target_native)
+    full_to_target = tuple(adapter.full_native_to_subset_native)
+    bundle_manifest = json.loads((bundle / "manifest.json").read_text())
+    requires_retokenized_labels = bool(bundle_manifest.get("requires_retokenized_training_labels", False))
     target_sha = hashlib.sha256(adapter.model_bytes).hexdigest()
     base_sha = hashlib.sha256(adapter.base_model_bytes).hexdigest()
     mapping = adapter.id_map.to_dict()
@@ -231,10 +257,10 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
     original = ASRModel.restore_from(str(source), map_location="cpu")
     if type(original) not in {EncDecRNNTBPEModelWithPrompt, native_class}:
         raise ValueError("Unsupported source model class for native migration")
-    source_tokenizer_check = validate_source_native_tokenizer(original, adapter.base_model_bytes)
+    source_inventory, source_to_target, source_tokenizer_check = select_source_native_inventory(original, adapter)
     old_layout = inspect_nemo_layout(original)
     if old_layout.output_size != len(source_to_target):
-        raise ValueError("Source acoustic vocabulary disagrees with the bundle's original native inventory")
+        raise ValueError("Source acoustic vocabulary disagrees with the selected pinned tokenizer inventory")
     cfg = OmegaConf.create(OmegaConf.to_container(original.cfg, resolve=True))
     registry = _prompt_registry(cfg.model_defaults, prompt_registry)
     with open_dict(cfg):
@@ -242,8 +268,11 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         cfg.target = "untok.native_runtime.NativeNemotronRNNTModel"
         cfg.model_defaults.prompt_dictionary = registry["prompt_dictionary"]
         cfg.untok_native_migration = {"source_checkpoint_sha256": expected_source_sha256,
+                                      "source_inventory": source_inventory,
+                                      "source_tokenizer_sha256": source_tokenizer_check["native_tokenizer_sha256"],
                                       "base_tokenizer_sha256": base_sha,
                                       "tokenizer_sha256": target_sha,
+                                      "requires_retokenized_training_labels": requires_retokenized_labels,
                                       "prompt_registry": registry}
         for split in ("train_ds", "validation_ds", "test_ds"):
             cfg[split] = None
@@ -280,7 +309,8 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         if (restored.tokenizer.model_bytes != adapter.model_bytes
                 or restored.tokenizer.base_model_bytes != adapter.base_model_bytes
                 or restored.tokenizer.id_map.to_dict() != mapping
-                or tuple(restored.tokenizer.source_native_to_target_native) != source_to_target
+                or tuple(restored.tokenizer.source_native_to_target_native) != base_to_target
+                or tuple(restored.tokenizer.full_native_to_subset_native) != full_to_target
                 or restored.native_bundle_manifest_sha256 != tokenizer_cfg["bundle_manifest_sha256"]):
             raise ValueError("Native tokenizer artifacts or row mapping changed after checkpoint reload")
         if dict(restored.cfg.model_defaults.prompt_dictionary) != registry["prompt_dictionary"]:
@@ -288,6 +318,10 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         saved_metadata = OmegaConf.to_container(restored.cfg.untok_native_migration, resolve=True)
         if saved_metadata["prompt_registry"] != registry:
             raise ValueError("Prompt registry provenance changed after checkpoint reload")
+        if (saved_metadata.get("source_inventory") != source_inventory
+                or saved_metadata.get("source_tokenizer_sha256") != source_tokenizer_check["native_tokenizer_sha256"]
+                or saved_metadata.get("requires_retokenized_training_labels") != requires_retokenized_labels):
+            raise ValueError("Source tokenizer inventory or label policy changed after checkpoint reload")
         if any(not torch.equal(restored.state_dict()[key][added], value) for key, value in expected_added.items()):
             raise ValueError("Added native rows changed after checkpoint reload")
         initialization["verified_after_reload"] = True
@@ -295,18 +329,24 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
             raise ValueError("Pinned migration inputs changed during execution")
         report = {"schema_version": 1, "status": "native_migrated_weights_verified",
                   "source_checkpoint_sha256": expected_source_sha256, "checkpoint_sha256": _sha256(staged),
+                  "source_inventory": source_inventory,
+                  "source_tokenizer_sha256": source_tokenizer_check["native_tokenizer_sha256"],
                   "tokenizer_sha256": target_sha, "base_tokenizer_sha256": base_sha,
                   "bundle_manifest_sha256": tokenizer_cfg["bundle_manifest_sha256"],
                   "seed": seed, "old_layout": asdict(old_layout), "new_layout": asdict(new_layout),
                   "id_mapping": mapping, "old_model_to_new_model": list(source_to_target),
+                  "source_remapping": ("source_native_to_target_native" if source_inventory == "original_native_base"
+                                       else "full_native_to_subset_native"),
+                  "requires_retokenized_training_labels": requires_retokenized_labels,
                   "source_tokenizer_check": source_tokenizer_check,
                   "before_save": before, "after_reload": after,
                   "new_row_initialization": initialization, "prompt_registry": registry,
                   "native_tokenizer_verified_before_save_and_after_reload": True,
                   "asr_accuracy_evaluated": False, "training_forward_evaluated": False,
                   "logit_parity_evaluated": False,
-                  "remaining_gates": ["training_forward_backward", "retained_logit_and_audio_controls",
-                                      "unmasked_audio_regression", "new_language_fine_tuning_and_evaluation"]}
+                  "remaining_gates": (["retokenize_training_labels"] if requires_retokenized_labels else [])
+                                     + ["training_forward_backward", "retained_logit_and_audio_controls",
+                                        "unmasked_audio_regression", "new_language_fine_tuning_and_evaluation"]}
         staged_report = Path(staging) / report_path.name
         staged_report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         os.link(staged, output)

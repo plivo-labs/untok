@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Compare real reduced native checkpoints using explicitly restricted source outputs.
+"""Compare compacted native checkpoints using explicitly restricted source outputs.
 
-The source and reduced controls use identical retained rows and an identical
-original prompt. New Indic prompts absent from the source use an explicit auto
-control, followed by a separate requested-prompt run. This is a migration and
-streaming execution check, not an ASR accuracy or language-support guarantee.
+Preserved v3 can be compared with its pinned original NVIDIA base or full Untok v1
+source. The controls use identical retained rows and an identical source
+prompt. New Indic prompts absent from the source use an explicit auto control,
+followed by a separate requested-prompt run. This is a migration and streaming
+execution check, not an ASR accuracy or language-support guarantee.
 """
 from __future__ import annotations
 
@@ -28,15 +29,18 @@ LATIN_SOURCE_LANGUAGES = frozenset(
 
 
 def choose_rows(records, profile, languages=None, max_per_language=1):
+    from untok.evaluation import ADAPTATION_LOCALES, BASE_ASR_LOCALES
     from untok.prompts import TARGET_LOCALES
 
-    if profile not in {"latin", "latin-indic"}:
-        raise ValueError("This probe requires a reduced Latin or Latin+Indic checkpoint")
+    if profile not in {"latin", "latin-indic", "full"}:
+        raise ValueError("This probe requires a Latin, Latin+Indic or clean full checkpoint")
     if max_per_language < 1:
         raise ValueError("max-per-locale must be positive")
     # Arabic is retained alongside Urdu/Kashmiri in the Latin+Indic bundle.
     # This selection tests its old prompt path without asserting new accuracy.
     allowed = LATIN_SOURCE_LANGUAGES if profile == "latin" else LATIN_SOURCE_LANGUAGES | set(TARGET_LOCALES) | {"ar"}
+    if profile == "full":
+        allowed |= {locale.split("-")[0] for locale in BASE_ASR_LOCALES + ADAPTATION_LOCALES}
     requested = set(languages) if languages else {row["language"] for row in records} & allowed
     if not requested or not requested <= allowed:
         raise ValueError("Requested languages are outside this reduced tokenizer's scope")
@@ -51,6 +55,32 @@ def choose_rows(records, profile, languages=None, max_per_language=1):
                          key=lambda row: (row["duration"], row["id"]))
         selected.extend(matches[:max_per_language])
     return selected
+
+
+def select_probe_inventory(original, target_tokenizer, migration):
+    """Bind paired controls to the same exact source inventory as migration."""
+    from untok.clean import CleanTokenizerAdapter
+    from untok.native_checkpoint import select_source_native_inventory
+
+    inventory, mapping, checked = select_source_native_inventory(original, target_tokenizer)
+    if list(mapping) != migration.get("old_model_to_new_model"):
+        raise ValueError("Selected source mapping differs from the migration report")
+    expected = {
+        "source_inventory": inventory,
+        "source_tokenizer_sha256": checked["native_tokenizer_sha256"],
+        "source_remapping": ("source_native_to_target_native" if inventory == "original_native_base"
+                             else "full_native_to_subset_native"),
+    }
+    is_clean = isinstance(target_tokenizer, CleanTokenizerAdapter)
+    for name, value in expected.items():
+        # Historical v1 reports predate source-inventory fields and always
+        # selected the original base. New preserved reports must declare them.
+        if (is_clean or name in migration) and migration.get(name) != value:
+            raise ValueError(f"Migration report disagrees with selected source inventory: {name}")
+    if is_clean and migration.get("requires_retokenized_training_labels") is not True:
+        raise ValueError("Clean migration report must require retokenized training labels")
+    return mapping, {**expected, "source_native_check": checked,
+                     "requires_retokenized_training_labels": is_clean}
 
 
 def control_prompt(row, original_prompts, target_prompts):
@@ -249,7 +279,7 @@ def main():
     import native_checkpoint_probe
     from untok.checkpoint import inspect_nemo_layout
     from untok.checkpoint_validation import _configure_eager_decoding, _equivalent_inference_config
-    from untok.native_checkpoint import retained_row_pairs, validate_source_native_tokenizer
+    from untok.native_checkpoint import retained_row_pairs
 
     torch.manual_seed(0)
     torch.set_float32_matmul_precision("highest")
@@ -274,14 +304,13 @@ def main():
         original, reduced = load(args.source, args.device), load(args.checkpoint, args.device)
         profile = getattr(reduced.tokenizer, "profile", None)
         selected = choose_rows(rows(args.manifest, ("test", "valid")), profile, args.languages, args.max_per_locale)
-        mapping = tuple(reduced.tokenizer.source_native_to_target_native)
-        if list(mapping) != migration["old_model_to_new_model"]:
-            raise ValueError("Restored subset mapping differs from the migration report")
+        mapping, source_evidence = select_probe_inventory(original, reduced.tokenizer, migration)
+        report.update(source_evidence)
         old_layout, new_layout = inspect_nemo_layout(original), inspect_nemo_layout(reduced)
         retained, targets = retained_row_pairs(old_layout, new_layout, mapping)
-        if not any(value is None for value in mapping):
-            raise ValueError("A reduced checkpoint must explicitly remove original source rows")
-        report["source_native_check"] = validate_source_native_tokenizer(original, reduced.tokenizer.base_model_bytes)
+        # Preserved v3 profiles keep every original text row. The same paired
+        # control also covers historical compact subsets that omit source rows.
+        report["all_source_text_rows_retained"] = all(value is not None for value in mapping[:-1])
         if (sha_bytes(reduced.tokenizer.model_bytes) != migration["tokenizer_sha256"]
                 or json.loads(json.dumps(reduced.tokenizer.id_map.to_dict())) != migration["id_mapping"]):
             raise ValueError("Restored native tokenizer differs from migration metadata")
@@ -321,7 +350,7 @@ def main():
         report["selection_policy"] = "Shortest clips per target locale after filtering retained source-audio languages"
         report["passed"] = bool(report["utterances"]) and all(item["passed"] for item in report["utterances"])
         report["status"] = "passed_on_supplied_audio" if report["passed"] else "failed"
-        report["scope"] = "Restricted source versus reduced native migration controls; requested-prompt inference is diagnostic only"
+        report["scope"] = "Restricted pinned source versus compacted native migration controls; requested-prompt inference is diagnostic only"
     except Exception as error:
         report.update(status="failed", passed=False, error=str(error), traceback=traceback.format_exc())
         raise

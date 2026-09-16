@@ -1,0 +1,1696 @@
+{
+  "added": [
+    {
+      "piece": "Ð",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ò",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Þ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ā",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ą",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ċ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ē",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĕ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ė",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ę",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ě",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĝ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ġ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ģ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĥ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ħ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĩ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ī",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĭ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ķ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ĺ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ļ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ľ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ń",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ņ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŋ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŏ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŕ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŝ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ţ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŧ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ũ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ū",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŭ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ů",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ű",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ų",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ŷ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ÿ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɓ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƃ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɔ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɖ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɗ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƌ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǝ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ə",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɛ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƒ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɠ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɣ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɩ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɨ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƙ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɲ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƥ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʀ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʃ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƭ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʈ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʊ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʋ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƴ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƶ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʒ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƹ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǎ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǐ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǒ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǔ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǖ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǘ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǚ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǜ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǟ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǥ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǧ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǩ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǫ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǹ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ǿ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȃ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȅ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȇ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȋ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȏ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȓ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȗ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ț",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȝ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƞ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȧ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȩ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȯ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ȳ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ⱥ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƚ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɂ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ƀ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʌ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɇ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɍ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɏ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̀",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "́",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̂",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̃",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̄",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̆",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̇",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̈",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̉",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̊",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̋",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̌",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̏",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̑",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̛",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̣",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̤",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̦",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̧",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̨",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̭",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̮",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̰",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "̱",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḃ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḅ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḇ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḋ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḍ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḏ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḓ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḗ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḛ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḡ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḥ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḫ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḭ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḯ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḱ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḳ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḷ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḻ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḽ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ḿ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṁ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṃ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṅ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṇ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṋ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṍ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṑ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṓ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṕ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṗ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṙ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṛ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṟ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṡ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṣ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṫ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṭ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṯ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṱ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṳ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṹ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṽ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ṿ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẁ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẃ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẅ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẍ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẏ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẑ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẓ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẕ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ạ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ầ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẫ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ậ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ằ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẳ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ặ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẹ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẻ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ẽ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ề",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ể",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ễ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ệ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ỉ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ị",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ọ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ỏ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ỗ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ộ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ỡ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ợ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ụ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ử",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ữ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ự",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ỵ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ỹ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ↄ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ⱡ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ᵽ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɽ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɑ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɱ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɒ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ꞌ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɦ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɜ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɡ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɪ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʇ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ʂ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    },
+    {
+      "piece": "Ɤ",
+      "reason": "unicode_case_decomposition_coverage",
+      "score": -32.0
+    }
+  ],
+  "additions_normalization_stable": true,
+  "extension_policy": {
+    "coverage_additions": [
+      "Ð",
+      "Ò",
+      "Þ",
+      "Ā",
+      "Ą",
+      "Ĉ",
+      "Ċ",
+      "Ē",
+      "Ĕ",
+      "Ė",
+      "Ę",
+      "Ě",
+      "Ĝ",
+      "Ġ",
+      "Ģ",
+      "Ĥ",
+      "Ħ",
+      "Ĩ",
+      "Ī",
+      "Ĭ",
+      "Ĵ",
+      "Ķ",
+      "Ĺ",
+      "Ļ",
+      "Ľ",
+      "Ń",
+      "Ņ",
+      "Ŋ",
+      "Ŏ",
+      "Ŕ",
+      "Ŝ",
+      "Ţ",
+      "Ŧ",
+      "Ũ",
+      "Ū",
+      "Ŭ",
+      "Ů",
+      "Ű",
+      "Ų",
+      "Ŵ",
+      "Ŷ",
+      "Ÿ",
+      "Ɓ",
+      "Ƃ",
+      "Ɔ",
+      "Ɖ",
+      "Ɗ",
+      "Ƌ",
+      "Ǝ",
+      "Ə",
+      "Ɛ",
+      "Ƒ",
+      "Ɠ",
+      "Ɣ",
+      "Ɩ",
+      "Ɨ",
+      "Ƙ",
+      "Ɲ",
+      "Ɵ",
+      "Ƥ",
+      "Ʀ",
+      "Ʃ",
+      "Ƭ",
+      "Ʈ",
+      "Ʊ",
+      "Ʋ",
+      "Ƴ",
+      "Ƶ",
+      "Ʒ",
+      "Ƹ",
+      "Ǎ",
+      "Ǐ",
+      "Ǒ",
+      "Ǔ",
+      "Ǖ",
+      "Ǘ",
+      "Ǚ",
+      "Ǜ",
+      "Ǟ",
+      "Ǥ",
+      "Ǧ",
+      "Ǩ",
+      "Ǫ",
+      "Ǵ",
+      "Ǹ",
+      "Ǿ",
+      "Ȃ",
+      "Ȅ",
+      "Ȇ",
+      "Ȉ",
+      "Ȋ",
+      "Ȏ",
+      "Ȓ",
+      "Ȗ",
+      "Ț",
+      "Ȝ",
+      "Ƞ",
+      "Ȧ",
+      "Ȩ",
+      "Ȯ",
+      "Ȳ",
+      "Ⱥ",
+      "Ƚ",
+      "Ɂ",
+      "Ƀ",
+      "Ʉ",
+      "Ʌ",
+      "Ɇ",
+      "Ɉ",
+      "Ɍ",
+      "Ɏ",
+      "̀",
+      "́",
+      "̂",
+      "̃",
+      "̄",
+      "̆",
+      "̇",
+      "̈",
+      "̉",
+      "̊",
+      "̋",
+      "̌",
+      "̏",
+      "̑",
+      "̛",
+      "̣",
+      "̤",
+      "̦",
+      "̧",
+      "̨",
+      "̭",
+      "̮",
+      "̰",
+      "̱",
+      "Ḃ",
+      "Ḅ",
+      "Ḇ",
+      "Ḋ",
+      "Ḍ",
+      "Ḏ",
+      "Ḓ",
+      "Ḗ",
+      "Ḛ",
+      "Ḡ",
+      "Ḥ",
+      "Ḫ",
+      "Ḭ",
+      "Ḯ",
+      "Ḱ",
+      "Ḳ",
+      "Ḵ",
+      "Ḷ",
+      "Ḻ",
+      "Ḽ",
+      "Ḿ",
+      "Ṁ",
+      "Ṃ",
+      "Ṅ",
+      "Ṇ",
+      "Ṉ",
+      "Ṋ",
+      "Ṍ",
+      "Ṑ",
+      "Ṓ",
+      "Ṕ",
+      "Ṗ",
+      "Ṙ",
+      "Ṛ",
+      "Ṟ",
+      "Ṡ",
+      "Ṣ",
+      "Ṫ",
+      "Ṭ",
+      "Ṯ",
+      "Ṱ",
+      "Ṳ",
+      "Ṵ",
+      "Ṹ",
+      "Ṽ",
+      "Ṿ",
+      "Ẁ",
+      "Ẃ",
+      "Ẅ",
+      "Ẉ",
+      "Ẍ",
+      "Ẏ",
+      "Ẑ",
+      "Ẓ",
+      "Ẕ",
+      "Ạ",
+      "Ầ",
+      "Ẫ",
+      "Ậ",
+      "Ằ",
+      "Ẳ",
+      "Ẵ",
+      "Ặ",
+      "Ẹ",
+      "Ẻ",
+      "Ẽ",
+      "Ề",
+      "Ể",
+      "Ễ",
+      "Ệ",
+      "Ỉ",
+      "Ị",
+      "Ọ",
+      "Ỏ",
+      "Ỗ",
+      "Ộ",
+      "Ỡ",
+      "Ợ",
+      "Ụ",
+      "Ử",
+      "Ữ",
+      "Ự",
+      "Ỵ",
+      "Ỹ",
+      "Ↄ",
+      "Ⱡ",
+      "Ᵽ",
+      "Ɽ",
+      "Ɑ",
+      "Ɱ",
+      "Ɒ",
+      "Ꞌ",
+      "Ɦ",
+      "Ɜ",
+      "Ɡ",
+      "Ɪ",
+      "Ʇ",
+      "Ʂ",
+      "Ɤ"
+    ],
+    "coverage_policy": "Unicode 17 simple case and canonical decomposition closure of admitted single Latin pieces; normalization-stable missing scalars only",
+    "coverage_seed_characters": 429,
+    "name": "untok-original-prefix-preserved-v3",
+    "normalizer": "Exact original Nemotron normalizer; no spelling or joiner overrides",
+    "original_piece_policy": "Original IDs, complete piece messages and model metadata remain unchanged",
+    "profile_scope": "Filter additions only; original scripts are always retained",
+    "schema_version": 1,
+    "source_base_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+    "source_full_sha256": "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8",
+    "unicode_data_sha256": "2e1efc1dcb59c575eedf5ccae60f95229f706ee6d031835247d843c11d96470c"
+  },
+  "global_score_refit": false,
+  "inherited_normalization_changing_pieces": [
+    "？",
+    "⁇",
+    "Ａ",
+    "，"
+  ],
+  "inherited_strictly_dominated_pieces": [
+    "ang",
+    "anh",
+    "ao",
+    "ens",
+    "ia",
+    "ien",
+    "ier",
+    "ing",
+    "inga",
+    "io",
+    "iều",
+    "kr",
+    "lang",
+    "ning",
+    "nt",
+    "ong",
+    "tr",
+    "ung",
+    "uy",
+    "ày",
+    "ây",
+    "ên",
+    "ình",
+    "ôi",
+    "ông",
+    "úng",
+    "ăm",
+    "ược",
+    "يم",
+    "▁,",
+    "▁.",
+    "▁I",
+    "▁P",
+    "▁S",
+    "▁Si",
+    "▁V",
+    "▁a",
+    "▁ai",
+    "▁al",
+    "▁all",
+    "▁am",
+    "▁anh",
+    "▁ar",
+    "▁are",
+    "▁as",
+    "▁au",
+    "▁aus",
+    "▁b",
+    "▁ba",
+    "▁ben",
+    "▁ca",
+    "▁ce",
+    "▁cel",
+    "▁ch",
+    "▁cha",
+    "▁cho",
+    "▁co",
+    "▁col",
+    "▁cu",
+    "▁cá",
+    "▁các",
+    "▁cái",
+    "▁có",
+    "▁d",
+    "▁da",
+    "▁dar",
+    "▁darb",
+    "▁do",
+    "▁e",
+    "▁el",
+    "▁else",
+    "▁em",
+    "▁en",
+    "▁er",
+    "▁et",
+    "▁ez",
+    "▁f",
+    "▁fi",
+    "▁fr",
+    "▁g",
+    "▁ga",
+    "▁ge",
+    "▁gi",
+    "▁go",
+    "▁h",
+    "▁he",
+    "▁ho",
+    "▁i",
+    "▁ie",
+    "▁im",
+    "▁ima",
+    "▁in",
+    "▁it",
+    "▁j",
+    "▁je",
+    "▁jo",
+    "▁ju",
+    "▁jä",
+    "▁k",
+    "▁ka",
+    "▁kh",
+    "▁không",
+    "▁ki",
+    "▁kl",
+    "▁ko",
+    "▁kā",
+    "▁l",
+    "▁la",
+    "▁laik",
+    "▁le",
+    "▁lo",
+    "▁long",
+    "▁m",
+    "▁ma",
+    "▁mal",
+    "▁me",
+    "▁mi",
+    "▁mo",
+    "▁mu",
+    "▁my",
+    "▁mà",
+    "▁một",
+    "▁n",
+    "▁ne",
+    "▁nek",
+    "▁ng",
+    "▁ngh",
+    "▁người",
+    "▁nh",
+    "▁những",
+    "▁ni",
+    "▁nie",
+    "▁ning",
+    "▁no",
+    "▁ny",
+    "▁này",
+    "▁né",
+    "▁nó",
+    "▁o",
+    "▁ob",
+    "▁om",
+    "▁on",
+    "▁our",
+    "▁ovat",
+    "▁p",
+    "▁person",
+    "▁ph",
+    "▁r",
+    "▁re",
+    "▁res",
+    "▁ri",
+    "▁s",
+    "▁sam",
+    "▁se",
+    "▁ser",
+    "▁si",
+    "▁ska",
+    "▁skriv",
+    "▁so",
+    "▁sp",
+    "▁st",
+    "▁sta",
+    "▁ta",
+    "▁tam",
+    "▁tas",
+    "▁te",
+    "▁tego",
+    "▁tej",
+    "▁ten",
+    "▁ter",
+    "▁th",
+    "▁thì",
+    "▁tid",
+    "▁tie",
+    "▁to",
+    "▁tot",
+    "▁tou",
+    "▁tr",
+    "▁tra",
+    "▁trong",
+    "▁tu",
+    "▁tud",
+    "▁tur",
+    "▁tá",
+    "▁tôi",
+    "▁tā",
+    "▁u",
+    "▁v",
+    "▁va",
+    "▁vad",
+    "▁ved",
+    "▁vol",
+    "▁và",
+    "▁vý",
+    "▁với",
+    "▁w",
+    "▁wie",
+    "▁wo",
+    "▁wy",
+    "▁x",
+    "▁y",
+    "▁yo",
+    "▁z",
+    "▁ze",
+    "▁é",
+    "▁és",
+    "▁đi",
+    "▁đã",
+    "▁đó",
+    "▁được",
+    "▁še",
+    "▁με",
+    "▁τη",
+    "▁П",
+    "▁в",
+    "▁ви",
+    "▁е",
+    "▁з",
+    "▁и",
+    "▁не",
+    "▁о",
+    "▁работ",
+    "▁с",
+    "▁со",
+    "▁то",
+    "▁у",
+    "▁і",
+    "▁ב",
+    "▁הר",
+    "▁וה",
+    "▁ל",
+    "▁ب",
+    "▁م",
+    "▁ما",
+    "▁و",
+    "▁को",
+    "▁जी",
+    "▁द",
+    "▁दे",
+    "▁नि",
+    "▁पा",
+    "▁सु",
+    "▁企",
+    "▁개",
+    "▁나",
+    "▁대",
+    "▁부",
+    "▁사",
+    "▁어",
+    "▁오",
+    "▁일",
+    "▁제",
+    "▁조",
+    "▁주",
+    "▁중"
+  ],
+  "locale_tag_types": "preserved from original",
+  "original_native_entries_preserved": 13087,
+  "original_normalizer_and_metadata_preserved": true,
+  "original_piece_ids_scores_types_preserved": true,
+  "profile": "latin-indic",
+  "profile_scope": "Filter additions only; the complete original multilingual bank is always retained",
+  "removed": [],
+  "retained_piece_scores": "unchanged",
+  "strictly_dominated_additions_remaining": 0
+}

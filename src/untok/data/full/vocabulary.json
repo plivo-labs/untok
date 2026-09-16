@@ -143848,5 +143848,1643 @@
     "public_id": 20551,
     "score": -32.0,
     "type": 1
+  },
+  {
+    "native_id": 20550,
+    "piece": "Ð",
+    "public_id": 20552,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20551,
+    "piece": "Ò",
+    "public_id": 20553,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20552,
+    "piece": "Þ",
+    "public_id": 20554,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20553,
+    "piece": "Ā",
+    "public_id": 20555,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20554,
+    "piece": "Ą",
+    "public_id": 20556,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20555,
+    "piece": "Ĉ",
+    "public_id": 20557,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20556,
+    "piece": "Ċ",
+    "public_id": 20558,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20557,
+    "piece": "Ē",
+    "public_id": 20559,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20558,
+    "piece": "Ĕ",
+    "public_id": 20560,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20559,
+    "piece": "Ė",
+    "public_id": 20561,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20560,
+    "piece": "Ę",
+    "public_id": 20562,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20561,
+    "piece": "Ě",
+    "public_id": 20563,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20562,
+    "piece": "Ĝ",
+    "public_id": 20564,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20563,
+    "piece": "Ġ",
+    "public_id": 20565,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20564,
+    "piece": "Ģ",
+    "public_id": 20566,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20565,
+    "piece": "Ĥ",
+    "public_id": 20567,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20566,
+    "piece": "Ħ",
+    "public_id": 20568,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20567,
+    "piece": "Ĩ",
+    "public_id": 20569,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20568,
+    "piece": "Ī",
+    "public_id": 20570,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20569,
+    "piece": "Ĭ",
+    "public_id": 20571,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20570,
+    "piece": "Ĵ",
+    "public_id": 20572,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20571,
+    "piece": "Ķ",
+    "public_id": 20573,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20572,
+    "piece": "Ĺ",
+    "public_id": 20574,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20573,
+    "piece": "Ļ",
+    "public_id": 20575,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20574,
+    "piece": "Ľ",
+    "public_id": 20576,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20575,
+    "piece": "Ń",
+    "public_id": 20577,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20576,
+    "piece": "Ņ",
+    "public_id": 20578,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20577,
+    "piece": "Ŋ",
+    "public_id": 20579,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20578,
+    "piece": "Ŏ",
+    "public_id": 20580,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20579,
+    "piece": "Ŕ",
+    "public_id": 20581,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20580,
+    "piece": "Ŝ",
+    "public_id": 20582,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20581,
+    "piece": "Ţ",
+    "public_id": 20583,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20582,
+    "piece": "Ŧ",
+    "public_id": 20584,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20583,
+    "piece": "Ũ",
+    "public_id": 20585,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20584,
+    "piece": "Ū",
+    "public_id": 20586,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20585,
+    "piece": "Ŭ",
+    "public_id": 20587,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20586,
+    "piece": "Ů",
+    "public_id": 20588,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20587,
+    "piece": "Ű",
+    "public_id": 20589,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20588,
+    "piece": "Ų",
+    "public_id": 20590,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20589,
+    "piece": "Ŵ",
+    "public_id": 20591,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20590,
+    "piece": "Ŷ",
+    "public_id": 20592,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20591,
+    "piece": "Ÿ",
+    "public_id": 20593,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20592,
+    "piece": "Ɓ",
+    "public_id": 20594,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20593,
+    "piece": "Ƃ",
+    "public_id": 20595,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20594,
+    "piece": "Ɔ",
+    "public_id": 20596,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20595,
+    "piece": "Ɖ",
+    "public_id": 20597,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20596,
+    "piece": "Ɗ",
+    "public_id": 20598,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20597,
+    "piece": "Ƌ",
+    "public_id": 20599,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20598,
+    "piece": "Ǝ",
+    "public_id": 20600,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20599,
+    "piece": "Ə",
+    "public_id": 20601,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20600,
+    "piece": "Ɛ",
+    "public_id": 20602,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20601,
+    "piece": "Ƒ",
+    "public_id": 20603,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20602,
+    "piece": "Ɠ",
+    "public_id": 20604,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20603,
+    "piece": "Ɣ",
+    "public_id": 20605,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20604,
+    "piece": "Ɩ",
+    "public_id": 20606,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20605,
+    "piece": "Ɨ",
+    "public_id": 20607,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20606,
+    "piece": "Ƙ",
+    "public_id": 20608,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20607,
+    "piece": "Ɲ",
+    "public_id": 20609,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20608,
+    "piece": "Ɵ",
+    "public_id": 20610,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20609,
+    "piece": "Ƥ",
+    "public_id": 20611,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20610,
+    "piece": "Ʀ",
+    "public_id": 20612,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20611,
+    "piece": "Ʃ",
+    "public_id": 20613,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20612,
+    "piece": "Ƭ",
+    "public_id": 20614,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20613,
+    "piece": "Ʈ",
+    "public_id": 20615,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20614,
+    "piece": "Ʊ",
+    "public_id": 20616,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20615,
+    "piece": "Ʋ",
+    "public_id": 20617,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20616,
+    "piece": "Ƴ",
+    "public_id": 20618,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20617,
+    "piece": "Ƶ",
+    "public_id": 20619,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20618,
+    "piece": "Ʒ",
+    "public_id": 20620,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20619,
+    "piece": "Ƹ",
+    "public_id": 20621,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20620,
+    "piece": "Ǎ",
+    "public_id": 20622,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20621,
+    "piece": "Ǐ",
+    "public_id": 20623,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20622,
+    "piece": "Ǒ",
+    "public_id": 20624,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20623,
+    "piece": "Ǔ",
+    "public_id": 20625,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20624,
+    "piece": "Ǖ",
+    "public_id": 20626,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20625,
+    "piece": "Ǘ",
+    "public_id": 20627,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20626,
+    "piece": "Ǚ",
+    "public_id": 20628,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20627,
+    "piece": "Ǜ",
+    "public_id": 20629,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20628,
+    "piece": "Ǟ",
+    "public_id": 20630,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20629,
+    "piece": "Ǥ",
+    "public_id": 20631,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20630,
+    "piece": "Ǧ",
+    "public_id": 20632,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20631,
+    "piece": "Ǩ",
+    "public_id": 20633,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20632,
+    "piece": "Ǫ",
+    "public_id": 20634,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20633,
+    "piece": "Ǵ",
+    "public_id": 20635,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20634,
+    "piece": "Ǹ",
+    "public_id": 20636,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20635,
+    "piece": "Ǿ",
+    "public_id": 20637,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20636,
+    "piece": "Ȃ",
+    "public_id": 20638,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20637,
+    "piece": "Ȅ",
+    "public_id": 20639,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20638,
+    "piece": "Ȇ",
+    "public_id": 20640,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20639,
+    "piece": "Ȉ",
+    "public_id": 20641,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20640,
+    "piece": "Ȋ",
+    "public_id": 20642,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20641,
+    "piece": "Ȏ",
+    "public_id": 20643,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20642,
+    "piece": "Ȓ",
+    "public_id": 20644,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20643,
+    "piece": "Ȗ",
+    "public_id": 20645,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20644,
+    "piece": "Ț",
+    "public_id": 20646,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20645,
+    "piece": "Ȝ",
+    "public_id": 20647,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20646,
+    "piece": "Ƞ",
+    "public_id": 20648,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20647,
+    "piece": "Ȧ",
+    "public_id": 20649,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20648,
+    "piece": "Ȩ",
+    "public_id": 20650,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20649,
+    "piece": "Ȯ",
+    "public_id": 20651,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20650,
+    "piece": "Ȳ",
+    "public_id": 20652,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20651,
+    "piece": "Ⱥ",
+    "public_id": 20653,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20652,
+    "piece": "Ƚ",
+    "public_id": 20654,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20653,
+    "piece": "Ɂ",
+    "public_id": 20655,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20654,
+    "piece": "Ƀ",
+    "public_id": 20656,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20655,
+    "piece": "Ʉ",
+    "public_id": 20657,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20656,
+    "piece": "Ʌ",
+    "public_id": 20658,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20657,
+    "piece": "Ɇ",
+    "public_id": 20659,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20658,
+    "piece": "Ɉ",
+    "public_id": 20660,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20659,
+    "piece": "Ɍ",
+    "public_id": 20661,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20660,
+    "piece": "Ɏ",
+    "public_id": 20662,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20661,
+    "piece": "̀",
+    "public_id": 20663,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20662,
+    "piece": "́",
+    "public_id": 20664,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20663,
+    "piece": "̂",
+    "public_id": 20665,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20664,
+    "piece": "̃",
+    "public_id": 20666,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20665,
+    "piece": "̄",
+    "public_id": 20667,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20666,
+    "piece": "̆",
+    "public_id": 20668,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20667,
+    "piece": "̇",
+    "public_id": 20669,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20668,
+    "piece": "̈",
+    "public_id": 20670,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20669,
+    "piece": "̉",
+    "public_id": 20671,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20670,
+    "piece": "̊",
+    "public_id": 20672,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20671,
+    "piece": "̋",
+    "public_id": 20673,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20672,
+    "piece": "̌",
+    "public_id": 20674,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20673,
+    "piece": "̏",
+    "public_id": 20675,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20674,
+    "piece": "̑",
+    "public_id": 20676,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20675,
+    "piece": "̛",
+    "public_id": 20677,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20676,
+    "piece": "̣",
+    "public_id": 20678,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20677,
+    "piece": "̤",
+    "public_id": 20679,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20678,
+    "piece": "̦",
+    "public_id": 20680,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20679,
+    "piece": "̧",
+    "public_id": 20681,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20680,
+    "piece": "̨",
+    "public_id": 20682,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20681,
+    "piece": "̭",
+    "public_id": 20683,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20682,
+    "piece": "̮",
+    "public_id": 20684,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20683,
+    "piece": "̰",
+    "public_id": 20685,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20684,
+    "piece": "̱",
+    "public_id": 20686,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20685,
+    "piece": "Ḃ",
+    "public_id": 20687,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20686,
+    "piece": "Ḅ",
+    "public_id": 20688,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20687,
+    "piece": "Ḇ",
+    "public_id": 20689,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20688,
+    "piece": "Ḋ",
+    "public_id": 20690,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20689,
+    "piece": "Ḍ",
+    "public_id": 20691,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20690,
+    "piece": "Ḏ",
+    "public_id": 20692,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20691,
+    "piece": "Ḓ",
+    "public_id": 20693,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20692,
+    "piece": "Ḗ",
+    "public_id": 20694,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20693,
+    "piece": "Ḛ",
+    "public_id": 20695,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20694,
+    "piece": "Ḡ",
+    "public_id": 20696,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20695,
+    "piece": "Ḥ",
+    "public_id": 20697,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20696,
+    "piece": "Ḫ",
+    "public_id": 20698,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20697,
+    "piece": "Ḭ",
+    "public_id": 20699,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20698,
+    "piece": "Ḯ",
+    "public_id": 20700,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20699,
+    "piece": "Ḱ",
+    "public_id": 20701,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20700,
+    "piece": "Ḳ",
+    "public_id": 20702,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20701,
+    "piece": "Ḵ",
+    "public_id": 20703,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20702,
+    "piece": "Ḷ",
+    "public_id": 20704,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20703,
+    "piece": "Ḻ",
+    "public_id": 20705,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20704,
+    "piece": "Ḽ",
+    "public_id": 20706,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20705,
+    "piece": "Ḿ",
+    "public_id": 20707,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20706,
+    "piece": "Ṁ",
+    "public_id": 20708,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20707,
+    "piece": "Ṃ",
+    "public_id": 20709,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20708,
+    "piece": "Ṅ",
+    "public_id": 20710,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20709,
+    "piece": "Ṇ",
+    "public_id": 20711,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20710,
+    "piece": "Ṉ",
+    "public_id": 20712,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20711,
+    "piece": "Ṋ",
+    "public_id": 20713,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20712,
+    "piece": "Ṍ",
+    "public_id": 20714,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20713,
+    "piece": "Ṑ",
+    "public_id": 20715,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20714,
+    "piece": "Ṓ",
+    "public_id": 20716,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20715,
+    "piece": "Ṕ",
+    "public_id": 20717,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20716,
+    "piece": "Ṗ",
+    "public_id": 20718,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20717,
+    "piece": "Ṙ",
+    "public_id": 20719,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20718,
+    "piece": "Ṛ",
+    "public_id": 20720,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20719,
+    "piece": "Ṟ",
+    "public_id": 20721,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20720,
+    "piece": "Ṡ",
+    "public_id": 20722,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20721,
+    "piece": "Ṣ",
+    "public_id": 20723,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20722,
+    "piece": "Ṫ",
+    "public_id": 20724,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20723,
+    "piece": "Ṭ",
+    "public_id": 20725,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20724,
+    "piece": "Ṯ",
+    "public_id": 20726,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20725,
+    "piece": "Ṱ",
+    "public_id": 20727,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20726,
+    "piece": "Ṳ",
+    "public_id": 20728,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20727,
+    "piece": "Ṵ",
+    "public_id": 20729,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20728,
+    "piece": "Ṹ",
+    "public_id": 20730,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20729,
+    "piece": "Ṽ",
+    "public_id": 20731,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20730,
+    "piece": "Ṿ",
+    "public_id": 20732,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20731,
+    "piece": "Ẁ",
+    "public_id": 20733,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20732,
+    "piece": "Ẃ",
+    "public_id": 20734,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20733,
+    "piece": "Ẅ",
+    "public_id": 20735,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20734,
+    "piece": "Ẉ",
+    "public_id": 20736,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20735,
+    "piece": "Ẍ",
+    "public_id": 20737,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20736,
+    "piece": "Ẏ",
+    "public_id": 20738,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20737,
+    "piece": "Ẑ",
+    "public_id": 20739,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20738,
+    "piece": "Ẓ",
+    "public_id": 20740,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20739,
+    "piece": "Ẕ",
+    "public_id": 20741,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20740,
+    "piece": "Ạ",
+    "public_id": 20742,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20741,
+    "piece": "Ầ",
+    "public_id": 20743,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20742,
+    "piece": "Ẫ",
+    "public_id": 20744,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20743,
+    "piece": "Ậ",
+    "public_id": 20745,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20744,
+    "piece": "Ằ",
+    "public_id": 20746,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20745,
+    "piece": "Ẳ",
+    "public_id": 20747,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20746,
+    "piece": "Ẵ",
+    "public_id": 20748,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20747,
+    "piece": "Ặ",
+    "public_id": 20749,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20748,
+    "piece": "Ẹ",
+    "public_id": 20750,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20749,
+    "piece": "Ẻ",
+    "public_id": 20751,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20750,
+    "piece": "Ẽ",
+    "public_id": 20752,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20751,
+    "piece": "Ề",
+    "public_id": 20753,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20752,
+    "piece": "Ể",
+    "public_id": 20754,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20753,
+    "piece": "Ễ",
+    "public_id": 20755,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20754,
+    "piece": "Ệ",
+    "public_id": 20756,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20755,
+    "piece": "Ỉ",
+    "public_id": 20757,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20756,
+    "piece": "Ị",
+    "public_id": 20758,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20757,
+    "piece": "Ọ",
+    "public_id": 20759,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20758,
+    "piece": "Ỏ",
+    "public_id": 20760,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20759,
+    "piece": "Ỗ",
+    "public_id": 20761,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20760,
+    "piece": "Ộ",
+    "public_id": 20762,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20761,
+    "piece": "Ỡ",
+    "public_id": 20763,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20762,
+    "piece": "Ợ",
+    "public_id": 20764,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20763,
+    "piece": "Ụ",
+    "public_id": 20765,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20764,
+    "piece": "Ử",
+    "public_id": 20766,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20765,
+    "piece": "Ữ",
+    "public_id": 20767,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20766,
+    "piece": "Ự",
+    "public_id": 20768,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20767,
+    "piece": "Ỵ",
+    "public_id": 20769,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20768,
+    "piece": "Ỹ",
+    "public_id": 20770,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20769,
+    "piece": "Ↄ",
+    "public_id": 20771,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20770,
+    "piece": "Ⱡ",
+    "public_id": 20772,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20771,
+    "piece": "Ᵽ",
+    "public_id": 20773,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20772,
+    "piece": "Ɽ",
+    "public_id": 20774,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20773,
+    "piece": "Ɑ",
+    "public_id": 20775,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20774,
+    "piece": "Ɱ",
+    "public_id": 20776,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20775,
+    "piece": "Ɒ",
+    "public_id": 20777,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20776,
+    "piece": "Ꞌ",
+    "public_id": 20778,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20777,
+    "piece": "Ɦ",
+    "public_id": 20779,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20778,
+    "piece": "Ɜ",
+    "public_id": 20780,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20779,
+    "piece": "Ɡ",
+    "public_id": 20781,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20780,
+    "piece": "Ɪ",
+    "public_id": 20782,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20781,
+    "piece": "Ʇ",
+    "public_id": 20783,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20782,
+    "piece": "Ʂ",
+    "public_id": 20784,
+    "score": -32.0,
+    "type": 1
+  },
+  {
+    "native_id": 20783,
+    "piece": "Ɤ",
+    "public_id": 20785,
+    "score": -32.0,
+    "type": 1
   }
 ]

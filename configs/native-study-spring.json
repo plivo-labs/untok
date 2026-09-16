@@ -1,0 +1,371 @@
+[
+  {
+    "repo": "SPRINGLab/SPRING_INX_Assamese_R1",
+    "revision": "996bfa4853d1d392254e61d0ac900f5e3f2f8465",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 4713471482.654,
+            "num_examples": 24593
+          },
+          {
+            "name": "validation",
+            "num_bytes": 452150960.2,
+            "num_examples": 2486
+          },
+          {
+            "name": "test",
+            "num_bytes": 436244565.748,
+            "num_examples": 2451
+          }
+        ],
+        "download_size": 5978089238,
+        "dataset_size": 5601867008.602
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Tamil_R1",
+    "revision": "3931b31eaa37449c263d380fd215b18c36558846",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 12514005492.18,
+            "num_examples": 78030
+          },
+          {
+            "name": "validation",
+            "num_bytes": 2031649680.85,
+            "num_examples": 7809
+          },
+          {
+            "name": "test",
+            "num_bytes": 571419545.465,
+            "num_examples": 1977
+          }
+        ],
+        "download_size": 23511394867,
+        "dataset_size": 15117074718.495
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Bengali_R1",
+    "revision": "84a3fb13194b7646ec2a3071bf7e83840461acbc",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 34710823186.014,
+            "num_examples": 144021
+          },
+          {
+            "name": "validation",
+            "num_bytes": 3752482198.924,
+            "num_examples": 15378
+          },
+          {
+            "name": "test",
+            "num_bytes": 529945896.086,
+            "num_examples": 1922
+          }
+        ],
+        "download_size": 44212191018,
+        "dataset_size": 38993251281.024
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Gujarati_R1",
+    "revision": "6cbbaf73ba99c7afbc78fd589e2cebda74959746",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 18287257473.824,
+            "num_examples": 63166
+          },
+          {
+            "name": "validation",
+            "num_bytes": 2205427112.834,
+            "num_examples": 7107
+          },
+          {
+            "name": "test",
+            "num_bytes": 556435471.84,
+            "num_examples": 1785
+          }
+        ],
+        "download_size": 21148062014,
+        "dataset_size": 21049120058.498
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Kannada_R1",
+    "revision": "bd9e8f130d19353ebee691fddf34ac5f99143416",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 8271807364.2,
+            "num_examples": 46755
+          },
+          {
+            "name": "validation",
+            "num_bytes": 970254510.506,
+            "num_examples": 5109
+          },
+          {
+            "name": "test",
+            "num_bytes": 521374082.878,
+            "num_examples": 2719
+          }
+        ],
+        "download_size": 9744499883,
+        "dataset_size": 9763435957.584
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Malayalam_R1",
+    "revision": "0843a854a60a1264bf42b1a869ddc85890f19bb1",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 19420811687.516,
+            "num_examples": 87227
+          },
+          {
+            "name": "validation",
+            "num_bytes": 2256067886.578,
+            "num_examples": 10039
+          },
+          {
+            "name": "test",
+            "num_bytes": 476489105.684,
+            "num_examples": 2058
+          }
+        ],
+        "download_size": 25969082991,
+        "dataset_size": 22153368679.778
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Marathi_R1",
+    "revision": "a3eded7ad3104f4a294937e5078ef7a254360ac7",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 11650028152.27,
+            "num_examples": 63229
+          },
+          {
+            "name": "validation",
+            "num_bytes": 1215459818.88,
+            "num_examples": 6970
+          },
+          {
+            "name": "test",
+            "num_bytes": 414010208.845,
+            "num_examples": 2463
+          }
+        ],
+        "download_size": 15215569889,
+        "dataset_size": 13279498179.995
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Odia_R1",
+    "revision": "0aee5fd987bf1fc897629a82ce9c328600652999",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 9832223980.228,
+            "num_examples": 43283
+          },
+          {
+            "name": "validation",
+            "num_bytes": 1058019174.2,
+            "num_examples": 4856
+          },
+          {
+            "name": "test",
+            "num_bytes": 511010243.504,
+            "num_examples": 2476
+          }
+        ],
+        "download_size": 9947826187,
+        "dataset_size": 11401253397.932001
+      }
+    }
+  },
+  {
+    "repo": "SPRINGLab/SPRING_INX_Punjabi_R1",
+    "revision": "97e5f36fce3e24b0ddad726728d1cc4506c24476",
+    "card": {
+      "dataset_info": {
+        "features": [
+          {
+            "name": "utterance_id",
+            "dtype": "string"
+          },
+          {
+            "name": "text",
+            "dtype": "string"
+          },
+          {
+            "name": "audio",
+            "dtype": "audio"
+          }
+        ],
+        "splits": [
+          {
+            "name": "train",
+            "num_bytes": 10028021683.128,
+            "num_examples": 58096
+          },
+          {
+            "name": "validation",
+            "num_bytes": 1138112066.432,
+            "num_examples": 6331
+          },
+          {
+            "name": "test",
+            "num_bytes": 425642509.524,
+            "num_examples": 2131
+          }
+        ],
+        "download_size": 16342601901,
+        "dataset_size": 11591776259.084
+      }
+    }
+  }
+]

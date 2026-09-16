@@ -30,6 +30,10 @@ def main(argv=None):
     build.add_argument("--base", required=True, help="Original SentencePiece model from the native checkpoint")
     build.add_argument("--selection", required=True, help="Ordered, scored additions and native base SHA256")
     build.add_argument("--output", required=True, help="Empty directory for a separate native candidate bundle")
+    clean = commands.add_parser("clean", help="Rebuild append-only profiles with unchanged original Nemotron text IDs")
+    clean.set_defaults(operation="clean")
+    clean.add_argument("--bundle", required=True, help="Original full bundle or a preserved bundle containing that source")
+    clean.add_argument("--output", required=True, help="New or empty directory for all three cleaned profiles")
     check = commands.add_parser(
         "check", aliases=["check-unigram"],
         help="Verify native bundle hashes, vocabulary and ID mapping on CPU",
@@ -44,9 +48,9 @@ def main(argv=None):
                          default=["latin", "latin-indic", "full"])
     migrate = commands.add_parser("migrate", help="Create and verify a matching native NeMo checkpoint")
     migrate.set_defaults(operation="migrate")
-    migrate.add_argument("--source", required=True, help="Original native .nemo checkpoint")
+    migrate.add_argument("--source", required=True, help="Pinned native base or original full Untok v1 .nemo checkpoint")
     migrate.add_argument("--bundle", required=True, help="Full or reduced Unigram bundle")
-    migrate.add_argument("--source-sha256", required=True, help="Expected original checkpoint SHA256")
+    migrate.add_argument("--source-sha256", required=True, help="Expected source checkpoint SHA256")
     migrate.add_argument("--output", required=True, help="New .nemo destination")
     migrate.add_argument("--seed", type=int, default=0)
     validate = commands.add_parser(
@@ -76,6 +80,10 @@ def main(argv=None):
             from .unigram import build_native_tokenizer
 
             result = build_native_tokenizer(args.base, args.selection, args.output)
+        elif args.operation == "clean":
+            from .clean import build_clean_bundles
+
+            result = build_clean_bundles(args.bundle, args.output)
         elif args.operation == "check":
             from .bundles import load_tokenizer_bundle
 
@@ -103,6 +111,9 @@ def main(argv=None):
             result = {"status": report["status"], "structural_passed": report["structural_passed"],
                       "corpus_status": report["corpus_status"], "report": args.output,
                       "checkpoint_validated": False, "asr_validated": False}
+            for field in ("selection_quality_status", "selection_quality_passed"):
+                if field in report:
+                    result[field] = report[field]
         elif args.operation == "evaluate":
             from .evaluation import evaluate_predictions, load_manifest, load_predictions, write_report
 
