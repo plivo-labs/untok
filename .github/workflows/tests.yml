@@ -19,5 +19,7 @@ jobs:
           python -m pip install -e '.[test,checkpoint]'
       - name: Check the installed command
         run: untok --help
+      - name: Verify approved tokenizer artifacts
+        run: python scripts/verify_tokens.py
       - name: Run CPU unit and bundle contract tests
         run: python -m pytest -q

@@ -6,11 +6,11 @@ retain the component-specific terms below. The package's combined license
 expression records these separate obligations; it does not relicense every
 component under Apache-2.0.
 
-Native input pins are recorded in `configs/native-study-sources.lock.json`,
-the generated selection, frozen corpus manifest and study reports.
-`configs/sources.lock.json` preserves the input pins referenced by the
-historical fitting configuration. Build manifests record consumed hashes. This
-project does not assert NVIDIA, AI4Bharat or Meta endorsement.
+Current model hashes and the approved inventory are recorded in
+`configs/current-tokenizers.json` and `configs/selected-additions.json`.
+The immutable [research snapshot](https://github.com/plivo-labs/untok/tree/e2f8acd1bab8edf1dc72267678d4a2ba41949439)
+retains the source locks, frozen corpus manifests, fitting configuration and
+study reports. This project does not assert NVIDIA, AI4Bharat or Meta endorsement.
 
 | Input | Source and published license information |
 | --- | --- |
@@ -70,10 +70,11 @@ is not included in tokenizer bundles. Vaani was downloaded for inspection
 but excluded from native fitting because its lexical extraction policy is
 unresolved. IN22-Conv was unavailable to the supplied account and is excluded.
 
-Native script subset profiles use the generated Unicode 17.0.0 table in
-`src/untok/_bundle_script_ranges.py`. The table includes the Unicode License V3
-notice and ships as a Python module with the wheel. Regenerate it with
-`scripts/generate_bundle_script_ranges.py`; its inputs must match these hashes:
+The fixed script-subset selection was derived using Unicode 17.0.0 data.
+The maintained builder uses the approved inactive-ID lists directly, without a
+runtime Unicode classification table. The [archived generator](https://github.com/plivo-labs/untok/blob/e2f8acd1bab8edf1dc72267678d4a2ba41949439/scripts/generate_bundle_script_ranges.py)
+and [archived table](https://github.com/plivo-labs/untok/blob/e2f8acd1bab8edf1dc72267678d4a2ba41949439/src/untok/_bundle_script_ranges.py)
+preserve the selection method and Unicode notice. Its inputs have these hashes:
 
 | Unicode 17 input | SHA-256 |
 | --- | --- |

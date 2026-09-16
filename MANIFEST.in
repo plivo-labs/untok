@@ -1,4 +1,5 @@
 recursive-include configs *.json *.tsv
 recursive-include docs *.md
-recursive-include scripts *.py *.sh
+include scripts/build_tokenizers.py
+include scripts/verify_tokens.py
 global-exclude __pycache__ *.py[cod]

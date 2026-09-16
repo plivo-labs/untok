@@ -24,7 +24,6 @@ def test_native_facade_preserves_model_and_matches_nvidia(profile, tmp_path, nat
     assert isinstance(facade, native_sentencepiece)
     assert isinstance(facade, TokenizerSpec)
     assert facade.model_bytes == facade.backend.serialized_model_proto() == adapter.model_bytes
-    assert facade.id_map is adapter.id_map
     assert facade.source_native_to_target_native == adapter.source_native_to_target_native
     assert facade.blank_id == adapter.blank_id
     assert facade.pad_id == expected.pad_id == -1

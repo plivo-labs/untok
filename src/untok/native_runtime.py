@@ -170,28 +170,6 @@ def verify_native_output_mask(model):
     return report
 
 
-def transcribe_native_file(model, audio, *, target_lang):
-    """Transcribe one file through the verified native tensor/prompt path.
-
-    Keep the model in evaluation mode and return the real NeMo hypotheses and
-    observed prompt evidence. The pinned
-    NeMo file-list loader can choose a unified prompt, so use tensor audio and
-    verify the actual requested one-hot conditioning input instead.
-    """
-    from .inference import _sha256, _transcribe_with_verified_prompt
-
-    if not getattr(model, "native_tokenizer_sha256", None):
-        raise ValueError("Restore a native untok checkpoint before using native inference")
-    path = Path(audio)
-    model.eval()
-    try:
-        return _transcribe_with_verified_prompt(model, path, _sha256(path), target_lang)
-    finally:
-        # NeMo's transcription teardown calls submodule.unfreeze(), which can
-        # re-enable training mode after restoring the parent model's mode.
-        model.eval()
-
-
 def _register_native_target(model_class):
     from importlib import import_module
 

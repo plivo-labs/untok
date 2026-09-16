@@ -1,52 +1,29 @@
-"""Hash-pinned native Unigram RNNT migration, including explicit vocabulary subsets."""
+"""Hash-pinned native Unigram RNNT migration, preserving every original model row."""
 from __future__ import annotations
 
 from dataclasses import asdict
 import hashlib
 import json
-import operator
 import os
 from pathlib import Path
 import tempfile
-from typing import Mapping, Sequence
 
 from .checkpoint import RNNTLayout, _sha256, _torch, inspect_nemo_layout
 from .native_donors import initialize_text_donor_rows
 from .native_runtime import get_native_nemo_model_class, native_bundle_config, verify_native_output_mask
 
 
-def retained_row_pairs(old_layout: RNNTLayout, new_layout: RNNTLayout,
-                       source_to_target: Sequence[int | None]) -> tuple[tuple[int, ...], tuple[int, ...]]:
-    """Validate a source-sized map; None means an explicitly removed text row."""
-    if old_layout.row_keys != new_layout.row_keys:
-        raise ValueError("Vocabulary-dependent parameter names changed")
-    if (old_layout.output_size < 2 or new_layout.output_size < 2
+def retained_row_pairs(old_layout, new_layout, source_to_target):
+    """Keep every original text row at its ID and relocate only RNNT blank."""
+    expected = (*range(old_layout.blank_id), new_layout.blank_id)
+    if (old_layout.row_keys != new_layout.row_keys
             or old_layout.blank_id != old_layout.output_size - 1
-            or new_layout.blank_id != new_layout.output_size - 1):
-        raise ValueError("Expected dense native text rows followed by RNNT blank")
-    if len(source_to_target) != old_layout.output_size:
-        raise ValueError("Source row mapping must include every source row, including blank")
-    source_ids, target_ids = [], []
-    for old, new in enumerate(source_to_target):
-        if new is None:
-            continue
-        try:
-            if isinstance(new, bool):
-                raise TypeError("Boolean row ID")
-            new = operator.index(new)
-        except TypeError as error:
-            raise ValueError("Mapped row IDs must be integers or None") from error
-        if not 0 <= new < new_layout.output_size:
-            raise ValueError("Mapped row outside target vocabulary")
-        source_ids.append(old)
-        target_ids.append(new)
-    if len(set(target_ids)) != len(target_ids):
-        raise ValueError("Retained source rows must have one-to-one target IDs")
-    if source_to_target[old_layout.blank_id] != new_layout.blank_id:
-        raise ValueError("The original blank row must map to the target blank row")
-    if len(source_ids) < 2:
-        raise ValueError("At least one source text row and blank must be retained")
-    return tuple(source_ids), tuple(target_ids)
+            or new_layout.blank_id != new_layout.output_size - 1
+            or old_layout.blank_id < 1 or new_layout.blank_id < old_layout.blank_id
+            or any(type(index) is not int for index in source_to_target)
+            or tuple(source_to_target) != expected):
+        raise ValueError("Migration must retain every original text ID and relocate only blank")
+    return tuple(range(old_layout.output_size)), expected
 
 
 def _validate_state_shapes(source, target, old_layout, new_layout):
@@ -70,7 +47,7 @@ def _validate_state_shapes(source, target, old_layout, new_layout):
 
 
 def transfer_native_state_dict(source, initialized_target, old_layout, new_layout, source_to_target):
-    """Copy all shared state and precisely the retained vocabulary rows."""
+    """Copy every source tensor and relocate its vocabulary blank row."""
     torch = _torch()
     old_ids, new_ids = retained_row_pairs(old_layout, new_layout, source_to_target)
     _validate_state_shapes(source, initialized_target, old_layout, new_layout)
@@ -88,7 +65,7 @@ def transfer_native_state_dict(source, initialized_target, old_layout, new_layou
 
 
 def verify_native_state_transfer(source, migrated, old_layout, new_layout, source_to_target):
-    """Independently compare retained source tensors, without claiming removed rows survived."""
+    """Independently compare every source value, including the relocated blank."""
     torch = _torch()
     old_ids, new_ids = retained_row_pairs(old_layout, new_layout, source_to_target)
     _validate_state_shapes(source, migrated, old_layout, new_layout)
@@ -110,31 +87,6 @@ def verify_native_state_transfer(source, migrated, old_layout, new_layout, sourc
             "retained_source_rows_including_blank": len(old_ids),
             "removed_source_text_rows": old_layout.output_size - len(old_ids),
             "all_source_values_preserved": omitted == 0}
-
-
-def compare_retained_logits(source_logits, target_logits, old_layout, new_layout, source_to_target,
-                            *, atol=1e-6, rtol=1e-5, inactive_target_ids=()):
-    torch = _torch()
-    old_ids, new_ids = retained_row_pairs(old_layout, new_layout, source_to_target)
-    inactive = set(inactive_target_ids)
-    if (len(inactive) != len(inactive_target_ids)
-            or any(type(index) is not int or not 0 <= index < new_layout.blank_id for index in inactive)):
-        raise ValueError("Inactive logit IDs must be unique target text rows")
-    pairs = [(old, new) for old, new in zip(old_ids, new_ids) if new not in inactive]
-    old_ids, new_ids = tuple(old for old, _ in pairs), tuple(new for _, new in pairs)
-    if source_logits.shape[-1] != old_layout.output_size or target_logits.shape[-1] != new_layout.output_size:
-        raise ValueError("Logit widths disagree with their native layouts")
-    left = source_logits.index_select(-1, torch.tensor(old_ids, device=source_logits.device))
-    right = target_logits.index_select(-1, torch.tensor(new_ids, device=target_logits.device))
-    left = left.to(right.device)
-    if left.shape != right.shape or not torch.isfinite(left).all() or not torch.isfinite(right).all():
-        raise ValueError("Invalid retained logit shapes or non-finite values")
-    error = (left - right).abs().max().item() if left.numel() else 0.0
-    if not torch.allclose(left, right, atol=atol, rtol=rtol):
-        raise ValueError(f"Retained native logits changed (maximum absolute error {error})")
-    return {"passed": True, "max_absolute_error": error, "atol": atol, "rtol": rtol,
-            "inactive_target_outputs_excluded": sorted(inactive),
-            "scope": "active retained raw logits for supplied identical features and mapped retained prefixes"}
 
 
 def _source_native_bytes(model):
@@ -168,104 +120,13 @@ def validate_source_native_tokenizer(model, base_bytes):
             "piece_ids_checked": processor.get_piece_size(), "encoding_probes_checked": len(probes)}
 
 
-def select_source_native_inventory(model, adapter):
-    """Select an exact pinned inventory, never infer its IDs from tensor size.
-
-    Versioned profile recipes carry both their original NVIDIA base and the complete
-    v1 Untok model. A checkpoint trained against either can supply learned rows;
-    unrelated, already-clean, and merely same-sized tokenizers are rejected.
-    """
-    from .clean import CleanTokenizerAdapter
-
-    candidates = [("original_native_base", adapter.base_model_bytes,
-                   adapter.source_native_to_target_native)]
-    if isinstance(adapter, CleanTokenizerAdapter):
-        candidates.append(("original_untok_full_v1", adapter.full_model_bytes,
-                           adapter.full_native_to_subset_native))
-    actual = _source_native_bytes(model)
-    for inventory, expected, mapping in candidates:
-        if actual == expected:
-            checked = validate_source_native_tokenizer(model, expected)
-            return inventory, tuple(mapping), checked
-    raise ValueError("Restored source tokenizer is not a pinned original native base or supported full v1 inventory")
-
-
-def _prompt_registry(model_defaults, supplied=None, *, profile=None):
-    """Keep numeric source slots while selecting the target profile's names.
-
-    Indic identities are allocated before filtering, so deleting an unrelated
-    prompt name never makes its learned slot available for another language.
-    ``profile=None`` retains the historical all-source-plus-Indic contract.
-    """
-    from .prompts import TARGET_LOCALES, _read, _validate_dictionary, extend_prompt_registry
-    from .profile_policy import PROFILES, allowed_prompt_locales
-
-    source = {"num_prompts": int(model_defaults.num_prompts),
-              "prompt_dictionary": dict(model_defaults.prompt_dictionary)}
-    if profile is not None and profile not in PROFILES:
-        raise ValueError("Unknown tokenizer profile for prompt registry")
-    original = _validate_dictionary(source["prompt_dictionary"], source["num_prompts"])
-    registry = None if supplied is None else (dict(supplied) if isinstance(supplied, Mapping)
-                                               else json.loads(Path(supplied).read_text()))
-    if registry is not None and registry.get("profile", profile) != profile:
-        raise ValueError("Supplied prompt registry targets a different tokenizer profile")
-    targets = [{"language": language} for language in sorted(TARGET_LOCALES)]
-    if profile in {"original", "latin"}:
-        _, source_hash = _read(source)
-        selected = allowed_prompt_locales(profile, original)
-        dictionary = {name: original[name] for name in sorted(selected)}
-        if registry is not None:
-            if (registry.get("schema_version") != 1 or registry.get("num_prompts") != source["num_prompts"]
-                    or registry.get("source_processor_sha256") != source_hash):
-                raise ValueError("Supplied prompt registry used a different pinned processor artifact")
-            if registry.get("prompt_dictionary") != dictionary:
-                raise ValueError("Supplied prompt registry changes retained slots or exceeds the tokenizer profile")
-        checked = {"schema_version": 1, "num_prompts": source["num_prompts"],
-                   "source_processor_sha256": source_hash, "previous_registry_sha256": None,
-                   "prompt_dictionary": dictionary, "identity_assignments": {}, "explicit_aliases": {},
-                   "target_assignments": [], "allocated_this_build": {},
-                   "existing_target_count": 0, "new_target_count": 0,
-                   "output_language_tags_added": False,
-                   "validation_boundary": "Prompt configuration only; no new language capability is asserted."}
-    else:
-        previous = registry
-        if registry is not None and profile == "latin-indic" and "profile" in registry:
-            # Restore omitted source names solely for the upstream allocation
-            # validator. Supplied retained names win so tampered slots fail.
-            previous = {**registry, "prompt_dictionary": {**original, **registry.get("prompt_dictionary", {})}}
-        checked = extend_prompt_registry(source, targets, previous_registry=previous)
-        if registry is not None:
-            expected_names = allowed_prompt_locales(profile, checked["prompt_dictionary"]) if profile else set(checked["prompt_dictionary"])
-            expected = {name: checked["prompt_dictionary"][name] for name in expected_names}
-            supplied_dictionary = registry.get("prompt_dictionary")
-            if (supplied_dictionary != checked["prompt_dictionary"]
-                    and not (profile == "latin-indic" and registry.get("profile") == profile
-                             and supplied_dictionary == expected)):
-                raise ValueError("Supplied prompt registry does not cover all target identities")
-        if profile in {None, "full"}:
-            return checked if registry is None else registry
-        selected = allowed_prompt_locales(profile, checked["prompt_dictionary"])
-        checked["prompt_dictionary"] = {name: checked["prompt_dictionary"][name] for name in sorted(selected)}
-    retained_source = set(original) & set(checked["prompt_dictionary"])
-    reserved_slots = set(original.values()) | set(checked["prompt_dictionary"].values())
-    checked.update(profile=profile,
-                   excluded_upstream_prompt_names=sorted(set(original) - retained_source),
-                   upstream_entries_preserved=len(retained_source),
-                   upstream_slots_preserved=len({original[name] for name in retained_source}),
-                   reserved_source_prompt_slots=sorted(set(original.values())),
-                   unused_prompt_slots=[i for i in range(source["num_prompts"]) if i not in reserved_slots])
-    return checked
-
-
 def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256, seed=0,
-                              prompt_registry=None, max_new_mass_ratio=0.05,
+                              max_new_mass_ratio=0.05,
                               model_config=None, training_template=None, training_overrides=None):
-    """Migrate a pinned .nemo into a full, reduced, or clean native bundle.
+    """Migrate the original NVIDIA checkpoint to one of the four current profiles.
 
-    Versioned profiles accept the original NVIDIA base or its exact full Untok v1
-    tokenizer. Compact profiles intentionally omit selected rows. The
-    acoustic network and every retained row remain byte-equal, while changed
-    labels, softmaxes and speech accuracy still require separate checks.
+    Every source weight survives exactly. New classes and filtered outputs can
+    change recognition; tensor equality does not establish speech accuracy.
     """
     from importlib import resources
     from .bundles import PROFILES, load_tokenizer_bundle
@@ -290,12 +151,9 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
     adapter = load_tokenizer_bundle(bundle)
     tokenizer_cfg = native_bundle_config(bundle)
     base_to_target = tuple(adapter.source_native_to_target_native)
-    full_to_target = tuple(adapter.full_native_to_subset_native)
-    bundle_manifest = json.loads((bundle / "manifest.json").read_text())
-    requires_retokenized_labels = bool(bundle_manifest.get("requires_retokenized_training_labels", False))
+    requires_retokenized_labels = adapter.profile != "original"
     target_sha = hashlib.sha256(adapter.model_bytes).hexdigest()
     base_sha = hashlib.sha256(adapter.base_model_bytes).hexdigest()
-    mapping = adapter.id_map.to_dict()
     from nemo.collections.asr.models import ASRModel
     from nemo.collections.asr.models.rnnt_bpe_models_prompt import EncDecRNNTBPEModelWithPrompt
     from omegaconf import OmegaConf, open_dict
@@ -304,14 +162,14 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
     original = ASRModel.restore_from(str(source), map_location="cpu")
     if type(original) not in {EncDecRNNTBPEModelWithPrompt, native_class}:
         raise ValueError("Unsupported source model class for native migration")
-    source_inventory, source_to_target, source_tokenizer_check = select_source_native_inventory(original, adapter)
-    requires_retokenized_labels = requires_retokenized_labels or any(value is None for value in source_to_target[:-1])
+    source_tokenizer_check = validate_source_native_tokenizer(original, adapter.base_model_bytes)
+    source_inventory, source_to_target = "original_native_base", base_to_target
     old_layout = inspect_nemo_layout(original)
     if old_layout.output_size != len(source_to_target):
         raise ValueError("Source acoustic vocabulary disagrees with the selected pinned tokenizer inventory")
     cfg = OmegaConf.create(OmegaConf.to_container(original.cfg, resolve=True))
-    registry = _prompt_registry(cfg.model_defaults, prompt_registry,
-                                profile=adapter.profile if bundle_manifest.get("tokenizer_version", 0) >= 4 else None)
+    from .prompts import prompt_registry
+    registry = prompt_registry(cfg.model_defaults, adapter.profile)
     with open_dict(cfg):
         cfg.tokenizer = tokenizer_cfg
         cfg.target = "untok.native_runtime.NativeNemotronRNNTModel"
@@ -374,9 +232,7 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         after = verify_native_state_transfer(original.state_dict(), restored.state_dict(), old_layout, new_layout, source_to_target)
         if (restored.tokenizer.model_bytes != adapter.model_bytes
                 or restored.tokenizer.base_model_bytes != adapter.base_model_bytes
-                or restored.tokenizer.id_map.to_dict() != mapping
                 or tuple(restored.tokenizer.source_native_to_target_native) != base_to_target
-                or tuple(restored.tokenizer.full_native_to_subset_native) != full_to_target
                 or restored.native_bundle_manifest_sha256 != tokenizer_cfg["bundle_manifest_sha256"]):
             raise ValueError("Native tokenizer artifacts or row mapping changed after checkpoint reload")
         if dict(restored.cfg.model_defaults.prompt_dictionary) != registry["prompt_dictionary"]:
@@ -409,9 +265,8 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                   "tokenizer_sha256": target_sha, "base_tokenizer_sha256": base_sha,
                   "bundle_manifest_sha256": tokenizer_cfg["bundle_manifest_sha256"],
                   "seed": seed, "old_layout": asdict(old_layout), "new_layout": asdict(new_layout),
-                  "id_mapping": mapping, "old_model_to_new_model": list(source_to_target),
-                  "source_remapping": ("source_native_to_target_native" if source_inventory == "original_native_base"
-                                       else "full_native_to_subset_native"),
+                  "old_model_to_new_model": list(source_to_target),
+                  "source_remapping": "source_native_to_target_native",
                   "requires_retokenized_training_labels": requires_retokenized_labels,
                   "source_tokenizer_check": source_tokenizer_check,
                   "before_save": before, "after_reload": after,
@@ -425,8 +280,7 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                   "remaining_gates": (["retokenize_training_labels"] if requires_retokenized_labels else [])
                                      + ["training_forward_backward", "retained_logit_and_audio_controls",
                                         "unmasked_audio_regression"]
-                                     + ([] if bundle_manifest.get("tokenizer_version", 0) >= 4
-                                        and adapter.profile in {"original", "latin"}
+                                     + ([] if adapter.profile in {"original", "latin"}
                                         else ["new_language_fine_tuning_and_evaluation"])}
         staged_report = Path(staging) / report_path.name
         staged_report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")

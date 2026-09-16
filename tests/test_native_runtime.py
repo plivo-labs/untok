@@ -11,44 +11,12 @@ from types import ModuleType, SimpleNamespace
 import pytest
 from sentencepiece import sentencepiece_model_pb2 as pb
 
-from untok.bundles import load_tokenizer_bundle, package_tokenizer_bundles
+from untok.bundles import load_tokenizer_bundle
 from untok.native_checkpoint import migrate_native_checkpoint
 from untok.native_runtime import (
     _register_native_target, _setup_native_tokenizer, install_native_output_mask,
     native_bundle_config, verify_native_output_mask,
 )
-from untok.unigram import build_native_tokenizer
-
-
-def test_native_file_inference_uses_verified_tensor_prompt_path(tmp_path, monkeypatch):
-    import untok.inference as inference
-    from untok.native_runtime import transcribe_native_file
-
-    audio = tmp_path / "speech.wav"
-    audio.write_bytes(b"audio provenance fixture")
-    calls = []
-    class Model:
-        native_tokenizer_sha256 = "verified-native"
-        eval_calls = 0
-        def eval(self):
-            self.eval_calls += 1
-            return self
-    model = Model()
-    def observed(*args):
-        calls.append(args)
-        return (["actual-return"], {"verified_kernel_calls": 1})
-    monkeypatch.setattr(inference, "_transcribe_with_verified_prompt", observed)
-    assert transcribe_native_file(model, audio, target_lang="hi-IN") == (["actual-return"], {"verified_kernel_calls": 1})
-    assert calls == [(model, audio, hashlib.sha256(audio.read_bytes()).hexdigest(), "hi-IN")]
-    assert model.eval_calls == 2
-    def fail(*args):
-        raise ValueError("transcription failed")
-    monkeypatch.setattr(inference, "_transcribe_with_verified_prompt", fail)
-    with pytest.raises(ValueError, match="transcription failed"):
-        transcribe_native_file(model, audio, target_lang="hi-IN")
-    assert model.eval_calls == 4
-    with pytest.raises(ValueError, match="native untok checkpoint"):
-        transcribe_native_file(SimpleNamespace(), audio, target_lang="hi-IN")
 
 
 def masked_toy_model():
@@ -240,22 +208,8 @@ def test_real_nemo_serialization_forwards_trainer_to_native_constructor(monkeypa
 
 @pytest.fixture
 def native_bundle(tmp_path):
-    proto = pb.ModelProto()
-    proto.trainer_spec.model_type = pb.TrainerSpec.UNIGRAM
-    proto.trainer_spec.unk_id = 0
-    proto.trainer_spec.bos_id = proto.trainer_spec.eos_id = proto.trainer_spec.pad_id = -1
-    proto.normalizer_spec.name = "identity"
-    proto.normalizer_spec.remove_extra_whitespaces = False
-    for index, (piece, score) in enumerate([("<unk>", 0), ("▁", 0), ("a", -2), ("b", -3), ("z", -253), ("я", -4)]):
-        proto.pieces.add(piece=piece, score=score, type=2 if index == 0 else 1)
-    proto.trainer_spec.vocab_size = len(proto.pieces)
-    base = tmp_path / "base.model"
-    base.write_bytes(proto.SerializeToString())
-    selection = tmp_path / "selection.json"
-    selection.write_text(json.dumps({"base_tokenizer_sha256": hashlib.sha256(base.read_bytes()).hexdigest(),
-                                     "additions": [{"piece": "க", "score": -2}, {"piece": "▁க", "score": -1}]}))
     bundle = tmp_path / "bundle"
-    build_native_tokenizer(base, selection, bundle)
+    shutil.copytree(Path(__file__).parents[1] / "src/untok/data/full", bundle)
     return bundle
 
 
@@ -279,21 +233,20 @@ def test_native_bundle_survives_renamed_archive_paths_and_source_directory_remov
     cfg = native_bundle_config(native_bundle)
     first = ArtifactModel(cfg, tmp_path / "first-archive")
     _setup_native_tokenizer(first, cfg)
-    assert len(first.registered) == 6
+    assert len(first.registered) == len(json.loads((native_bundle / "manifest.json").read_text())["files"]) + 1
     assert first.tokenizer.model_bytes == original.model_bytes
-    assert first.tokenizer.source_native_to_target_native == (0, 1, 2, 3, 4, 5, 8)
+    assert first.tokenizer.source_native_to_target_native == (*range(13087), 20360)
     shutil.rmtree(native_bundle)
     restored_cfg = copy.deepcopy(cfg)
     second = ArtifactModel(restored_cfg, tmp_path / "restored-archive")
     _setup_native_tokenizer(second, restored_cfg)
     assert second.native_bundle_manifest_sha256 == first.native_bundle_manifest_sha256
-    assert second.tokenizer.id_map.to_dict() == original.id_map.to_dict()
+    assert second.tokenizer.source_native_to_target_native == original.source_native_to_target_native
     assert second.tokenizer.model_bytes == original.model_bytes
     assert second.tokenizer.base_model_bytes == original.base_model_bytes
     for text in ("", "  a  b ", "a\u200cb", "க", "aகb", "🙂a"):
         assert second.tokenizer.text_to_ids(text) == original.text_to_ids(text)
         assert second.tokenizer.ids_to_text(second.tokenizer.text_to_ids(text)) == original.ids_to_text(original.text_to_ids(text))
-    assert second.tokenizer.ids_to_text([2, 2, 3]) == "aab"
 
 
 def test_v5_archive_reconstructs_physical_vocabulary_and_required_mask(tmp_path, native_sentencepiece):
@@ -387,7 +340,7 @@ def test_native_migration_requires_checkpoint_pin_before_nemo_or_output(native_b
 
 
 @pytest.mark.parametrize("corrupt_reload", [False, True])
-@pytest.mark.parametrize("profile", ["full", "latin-indic", "latin"])
+@pytest.mark.parametrize("profile", ["original", "full", "latin-indic", "latin"])
 @pytest.mark.parametrize("configured", [False, True])
 def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reload(
     monkeypatch, native_bundle, tmp_path, corrupt_reload, profile, configured,
@@ -399,9 +352,7 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
     import untok.native_checkpoint as migration
     from test_native_checkpoint import toy_model
 
-    if profile != "full":
-        package_tokenizer_bundles(native_bundle, tmp_path / "variants", profiles=[profile], make_zips=False)
-        native_bundle = tmp_path / "variants" / profile
+    native_bundle = Path(__file__).parents[1] / "src/untok/data" / profile
 
     convert = OmegaConf.create
     plain = lambda cfg: OmegaConf.to_container(cfg, resolve=True)
@@ -422,7 +373,8 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
             self.tokenizer = SimpleNamespace(tokenizer=backend, vocab_size=backend.get_piece_size(),
                 ids_to_tokens=lambda ids: [backend.id_to_piece(i) for i in ids],
                 text_to_ids=lambda text: backend.encode(text, out_type=int))
-            self.cfg = convert({"model_defaults": {"num_prompts": 64, "prompt_dictionary": {"auto": 0, "en-US": 1}},
+            defaults = json.loads((native_bundle.parent / "prompt-registry.json").read_text())["source"]
+            self.cfg = convert({"model_defaults": defaults,
                                 "tokenizer": {"type": "bpe"}, "encoder": {"att_context_size": [56, 13]},
                                 "train_ds": {"manifest": "private-source"}})
             copy_modules(self, backend.get_piece_size())
@@ -437,6 +389,7 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
             self.registered = {}
             _setup_native_tokenizer(self, cfg.tokenizer)
             copy_modules(self, self.tokenizer.vocab_size)
+            install_native_output_mask(self)
 
         def register_artifact(self, key, path):
             self.registered[key.rsplit(".", 1)[-1]] = Path(path).read_bytes()
@@ -505,17 +458,14 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
         report = migration.migrate_native_checkpoint(source, native_bundle, destination, **kwargs)
         assert destination.exists() and destination.with_suffix(".migration.json").exists()
         assert report["before_save"]["passed"] and report["after_reload"]["passed"]
-        assert report["after_reload"]["all_source_values_preserved"] == (profile == "full")
-        assert report["old_model_to_new_model"] == {
-            "full": [0, 1, 2, 3, 4, 5, 8],
-            "latin-indic": [0, 1, 2, 3, 4, None, 7],
-            "latin": [0, 1, 2, 3, 4, None, 5],
-        }[profile]
-        assert len(report["prompt_registry"]["target_assignments"]) == 22
+        assert report["after_reload"]["all_source_values_preserved"]
+        blank = 13087 if profile in {"original", "latin"} else 20360
+        assert report["old_model_to_new_model"] == [*range(13087), blank]
+        assert len(report["prompt_registry"]["target_assignments"]) == (0 if profile in {"original", "latin"} else 22)
         assert report["new_row_initialization"]["verified_after_reload"]
         assert report["initialization"] == "text-donor"
         policy = report["new_row_initialization"]
-        if profile == "latin":
+        if profile in {"original", "latin"}:
             assert policy["policy"] == "no_added_rows"
         else:
             assert policy["policy"] == "retained_text_donor_mean_bound_v1"

@@ -25,7 +25,7 @@ where = ["src"]
 namespaces = false
 
 [tool.setuptools.package-data]
-untok = ["data/*/*.json", "data/*/*.model", "notices/*.md", "notices/licenses/*.txt"]
+untok = ["data/*.json", "data/*/*.json", "data/*/*.model", "notices/*.md", "notices/licenses/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

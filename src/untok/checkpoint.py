@@ -1,10 +1,10 @@
-"""Shared native RNNT tensor-layout and output comparison checks."""
+"""Shared native RNNT tensor-layout checks."""
 from __future__ import annotations
 
 from dataclasses import dataclass
 import hashlib
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any
 
 
 def _torch():
@@ -78,40 +78,3 @@ def inspect_nemo_layout(model: Any) -> RNNTLayout:
     return RNNTLayout(name_for(embedding.weight), name_for(head.weight),
                       name_for(head.bias) if head.bias is not None else None,
                       blank, head.out_features)
-
-
-def compare_old_logits(
-    original_logits: Any, expanded_logits: Any, old_to_new: Sequence[int],
-    *, atol: float = 1e-6, rtol: float = 1e-5,
-) -> dict[str, Any]:
-    """Compare raw logits from identical features/prefixes, not full softmaxes."""
-    torch = _torch()
-    if original_logits.shape[-1] != len(old_to_new):
-        raise ValueError("Original logit width and row mapping disagree")
-    selected = expanded_logits.index_select(-1, torch.tensor(old_to_new, device=expanded_logits.device))
-    expected = original_logits.to(selected.device)
-    if expected.shape != selected.shape:
-        raise ValueError("Logit batch/frame/prefix shapes differ")
-    if not torch.isfinite(expected).all() or not torch.isfinite(selected).all():
-        raise ValueError("Non-finite old-token logits")
-    passed = torch.allclose(expected, selected, atol=atol, rtol=rtol)
-    error = (expected - selected).abs().max().item() if expected.numel() else 0.0
-    if not passed:
-        raise ValueError(f"Mapped old-token/blank logits changed (max absolute error {error})")
-    return {"passed": True, "max_absolute_error": error, "atol": atol, "rtol": rtol,
-            "scope": "raw_logits_for_supplied_features_and_prefixes"}
-
-
-def mask_new_outputs_for_test(logits: Any, old_to_new: Sequence[int]):
-    """Validation-only old-output mask, applied BEFORE any softmax.
-
-    Do not use this helper as evidence of unchanged production predictions with
-    additions enabled. It is not a language lock or a training policy.
-    """
-    torch = _torch()
-    if len(set(old_to_new)) != len(old_to_new) or any(i < 0 or i >= logits.shape[-1] for i in old_to_new):
-        raise ValueError("Invalid old-output map")
-    result = torch.full_like(logits, float("-inf"))
-    index = torch.tensor(old_to_new, device=logits.device)
-    result.index_copy_(-1, index, logits.index_select(-1, index))
-    return result
