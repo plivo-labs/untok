@@ -51,7 +51,7 @@ def full(tmp_path):
 
 def package(full, tmp_path):
     output = tmp_path / "packaged"
-    package_tokenizer_bundles(full, output)
+    package_tokenizer_bundles(full, output, profiles=("latin", "latin-indic", "full"))
     return output
 
 
@@ -108,12 +108,16 @@ def test_dense_row_maps_blank_and_public_padding(full, tmp_path):
 
 
 def test_full_files_and_archives_are_reproducible(full, tmp_path):
-    before = {p.name: p.read_bytes() for p in full.iterdir()}
+    def files(directory):
+        return {p.relative_to(directory).as_posix(): p.read_bytes()
+                for p in directory.rglob("*") if p.is_file()}
+
+    before = files(full)
     first, second = tmp_path / "one", tmp_path / "two"
-    result = package_tokenizer_bundles(full, first)
+    result = package_tokenizer_bundles(full, first, profiles=("latin", "latin-indic", "full"))
     package_tokenizer_bundles(full, second, profiles=("full", "latin-indic", "latin"))
-    assert before == {p.name: p.read_bytes() for p in full.iterdir()}
-    assert before == {p.name: p.read_bytes() for p in (first / "full").iterdir()}
+    assert before == files(full)
+    assert before == files(first / "full")
     for name in ("latin.zip", "latin-indic.zip", "full.zip", "bundles.json"):
         assert (first / name).read_bytes() == (second / name).read_bytes()
     for profile, item in result["bundles"].items():
@@ -166,7 +170,7 @@ def test_minimum_score_removal_fails_without_adding_dummy_piece(full, tmp_path):
     build_native_tokenizer(base, path, bundle)
     output = tmp_path / "invalid"
     with pytest.raises(ValueError, match="score extrema"):
-        package_tokenizer_bundles(bundle, output)
+        package_tokenizer_bundles(bundle, output, profiles=("latin", "latin-indic", "full"))
     assert not output.exists()
 
 
@@ -217,15 +221,15 @@ def test_actual_candidate_all_22_alphabets_and_protected_groups(tmp_path):
     original = load_tokenizer_bundle(full)
     latin = load_tokenizer_bundle(output / "latin")
     indic = load_tokenizer_bundle(output / "latin-indic")
-    assert (latin.vocab_size, indic.vocab_size, original.vocab_size) == (2916, 10572, 20550)
-    assert all(i is not None for i in indic.full_native_to_subset_native[13087:-1])
+    assert (latin.vocab_size, indic.vocab_size, original.vocab_size) == (2653, 10372, 20550)
+    assert sum(i is None for i in indic.full_native_to_subset_native[13087:-1]) == 190
     for entry in policy["profiles"].values():
         for character in entry["characters"]:
             ids = indic.text_to_ids(character)
             assert indic.unk_id not in ids
-            assert ids == indic.row_map.from_full(original.text_to_ids(character))
+            assert ids == [indic.full_native_to_subset_native[i] for i in original.text_to_ids(character)]
             assert indic.ids_to_text(ids) == original.ids_to_text(original.text_to_ids(character))
-    for name, adapter in [("hindi103", indic), ("latin190", latin), ("latin190", indic)]:
+    for name, adapter in [("hindi103", indic)]:
         for piece in policy["protected_piece_groups"][name]["pieces"]:
             assert piece in adapter.vocab
             original_id = original.token_to_id(piece)
@@ -233,13 +237,17 @@ def test_actual_candidate_all_22_alphabets_and_protected_groups(tmp_path):
             assert adapter.full_native_to_subset_native[original_id] == reduced_id
             assert adapter.backend.get_score(reduced_id) == original.backend.get_score(original_id)
     for adapter in (latin, indic):
+        assert not set(policy["protected_piece_groups"]["latin190"]["pieces"]) & set(adapter.vocab)
+    for adapter in (latin, indic):
         for text in policy["normalizer_probes"]:
             normalized = original.backend.normalize(text)
             assert adapter.backend.normalize(text) == normalized
             if all(character_allowed(c, adapter.profile) for c in normalized):
                 ids = original.text_to_ids(text)
-                assert adapter.text_to_ids(text) == adapter.row_map.from_full(ids)
-                assert adapter.ids_to_text(adapter.text_to_ids(text)) == original.ids_to_text(ids)
+                remapped = [adapter.full_native_to_subset_native[i] for i in ids]
+                if None not in remapped:
+                    assert adapter.text_to_ids(text) == remapped
+                    assert adapter.ids_to_text(adapter.text_to_ids(text)) == original.ids_to_text(ids)
     assert before == {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in full.iterdir() if p.is_file()}
 
 
@@ -284,7 +292,7 @@ def package_resources(full, tmp_path, monkeypatch):
     import untok.bundles as bundles
 
     package_root = tmp_path / "package"
-    package_tokenizer_bundles(full, package_root / "data", make_zips=False)
+    package_tokenizer_bundles(full, package_root / "data", profiles=("latin", "latin-indic", "full"), make_zips=False)
     monkeypatch.setattr(bundles.resources, "files", lambda package: package_root)
     return package_root
 
@@ -375,14 +383,15 @@ def test_zip_resource_manifest_rejects_path_traversal(package_resources, tmp_pat
             load_tokenizer_bundle("latin")
 
 
-@pytest.mark.parametrize("profile,size", [("latin", 13573), ("latin-indic", 20784), ("full", 20784)])
+@pytest.mark.parametrize("profile,size", [("original", 13087), ("latin", 2653), ("latin-indic", 10372), ("full", 20360)])
 def test_installed_profiles_include_the_frozen_candidate(profile, size):
     from untok.bundles import load_tokenizer
 
     expected_hashes = {
-        "latin": "e250b6b2f47ed337f13c3a957637feada09dbcf6e6d1bf628119647eadb70f12",
-        "latin-indic": "782eb9525d3dff47678dc10a69abf58f51752a8016514908769d9056c2b323e2",
-        "full": "782eb9525d3dff47678dc10a69abf58f51752a8016514908769d9056c2b323e2",
+        "original": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+        "latin": "035d463b9906a291b3428d56f1622dc758bb05b388b4d66905e52b68d93ea714",
+        "latin-indic": "e8035679586667af932d47d467fb9ff8696c8819fbcf49168633a6df20d67dfc",
+        "full": "815ee2313f17db264eb681f4f5a1a322fbb05c1667d9808fb3fb357ae749b857",
     }
     tokenizer = load_tokenizer(profile)
     assert tokenizer.vocab_size == size

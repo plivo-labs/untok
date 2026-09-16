@@ -210,7 +210,7 @@ def test_sdist_contains_and_loads_the_required_native_fit_inputs(tmp_path):
     # missing MANIFEST rules or add artifacts absent from a fresh checkout.
     staging = tmp_path / "source"
     staging.mkdir()
-    for name in ("pyproject.toml", "MANIFEST.in", "README.md", "THIRD_PARTY.md"):
+    for name in ("pyproject.toml", "MANIFEST.in", "README.md", "LICENSE", "NOTICE", "THIRD_PARTY.md"):
         shutil.copy2(REPO / name, staging / name)
     for name in ("src", "configs", "scripts", "docs", "licenses"):
         shutil.copytree(REPO / name, staging / name,

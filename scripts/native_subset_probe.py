@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Compare compacted native checkpoints using explicitly restricted source outputs.
 
-Preserved v3 can be compared with its pinned original NVIDIA base or full Untok v1
+Versioned profiles can be compared with their pinned original NVIDIA base or full Untok v1
 source. The controls use identical retained rows and an identical source
 prompt. New Indic prompts absent from the source use an explicit auto control,
 followed by a separate requested-prompt run. This is a migration and streaming
@@ -32,13 +32,13 @@ def choose_rows(records, profile, languages=None, max_per_language=1):
     from untok.evaluation import ADAPTATION_LOCALES, BASE_ASR_LOCALES
     from untok.prompts import TARGET_LOCALES
 
-    if profile not in {"latin", "latin-indic", "full"}:
-        raise ValueError("This probe requires a Latin, Latin+Indic or clean full checkpoint")
+    if profile not in {"original", "latin", "latin-indic", "full"}:
+        raise ValueError("This probe requires an original, Latin, Latin+Indic or full checkpoint")
     if max_per_language < 1:
         raise ValueError("max-per-locale must be positive")
-    # Arabic is retained alongside Urdu/Kashmiri in the Latin+Indic bundle.
-    # This selection tests its old prompt path without asserting new accuracy.
-    allowed = LATIN_SOURCE_LANGUAGES if profile == "latin" else LATIN_SOURCE_LANGUAGES | set(TARGET_LOCALES) | {"ar"}
+    allowed = LATIN_SOURCE_LANGUAGES if profile == "latin" else LATIN_SOURCE_LANGUAGES | set(TARGET_LOCALES)
+    if profile == "original":
+        allowed = {locale.split("-")[0] for locale in BASE_ASR_LOCALES + ADAPTATION_LOCALES}
     if profile == "full":
         allowed |= {locale.split("-")[0] for locale in BASE_ASR_LOCALES + ADAPTATION_LOCALES}
     requested = set(languages) if languages else {row["language"] for row in records} & allowed
@@ -77,10 +77,11 @@ def select_probe_inventory(original, target_tokenizer, migration):
         # selected the original base. New preserved reports must declare them.
         if (is_clean or name in migration) and migration.get(name) != value:
             raise ValueError(f"Migration report disagrees with selected source inventory: {name}")
-    if is_clean and migration.get("requires_retokenized_training_labels") is not True:
-        raise ValueError("Clean migration report must require retokenized training labels")
+    requires_retokenized = is_clean and (target_tokenizer.profile != "original" or any(value is None for value in mapping[:-1]))
+    if is_clean and migration.get("requires_retokenized_training_labels") is not requires_retokenized:
+        raise ValueError("Migration report disagrees with the profile's retokenized training label policy")
     return mapping, {**expected, "source_native_check": checked,
-                     "requires_retokenized_training_labels": is_clean}
+                     "requires_retokenized_training_labels": requires_retokenized}
 
 
 def control_prompt(row, original_prompts, target_prompts):
@@ -308,13 +309,12 @@ def main():
         report.update(source_evidence)
         old_layout, new_layout = inspect_nemo_layout(original), inspect_nemo_layout(reduced)
         retained, targets = retained_row_pairs(old_layout, new_layout, mapping)
-        # Preserved v3 profiles keep every original text row. The same paired
-        # control also covers historical compact subsets that omit source rows.
+        # The row map records whether this profile removes any source outputs.
         report["all_source_text_rows_retained"] = all(value is not None for value in mapping[:-1])
         if (sha_bytes(reduced.tokenizer.model_bytes) != migration["tokenizer_sha256"]
                 or json.loads(json.dumps(reduced.tokenizer.id_map.to_dict())) != migration["id_mapping"]):
             raise ValueError("Restored native tokenizer differs from migration metadata")
-        config = _equivalent_inference_config(original, reduced, "greedy_batch")
+        config = _equivalent_inference_config(original, reduced, "greedy_batch", allow_removed_prompts=True)
         report.update(profile=profile, config_section_sha256=config["config_section_sha256"],
                       retained_source_rows_including_blank=len(retained), removed_source_text_rows=mapping.count(None),
                       added_target_rows=new_layout.output_size-len(targets),

@@ -1,12 +1,15 @@
 # Language coverage evidence
 
-The 24/47/56 language lists describe intended vocabulary scope. They are not a
-certificate of complete orthography, dialect coverage, or speech accuracy. The
-new language-level validation measures all three shipped bundles against each
-supplied language and retains unknowns as failures of coverage on those texts.
-Every bundle now retains the original multilingual bank. The policy's minimum
-evaluation scopes still select required bundle/language combinations; additional
-combinations are measured without claiming complete coverage.
+Vocabulary scope is not a certificate of complete orthography, dialect coverage
+or speech accuracy. Version 4 has four distinct profiles: an exact `original`
+Nemotron model, compact `latin` and `latin-indic` subsets, and `full` with the
+original Nemotron bank plus Indic/shared additions. No added rare-Latin or
+Unicode case/decomposition inventory is imported into these runtime profiles.
+
+The evaluation measures every supplied language against every bundle. Required
+scope checks apply to each profile's declared languages; other combinations stay
+visible as measurements. Original Nemotron is evaluated as a separate baseline,
+including its inherited Hindi vocabulary.
 
 ## What was evaluated
 
@@ -31,12 +34,51 @@ is public read-speech reference text derived from parallel FLORES sentences,
 licensed CC BY 4.0. Only 7,588,052 bytes of TSV metadata were downloaded; no audio
 is needed. Source files are pinned to commit
 `70bb2e84b976b7e960aa89f1c648e09c59f894dd` and individual SHA256 digests in
-[the policy](../configs/language-coverage.json).
+[the v4 policy](../configs/language-coverage-v4.json).
 
 FLEURS provides Bokmål for the Norwegian profile. **Nynorsk remains unvalidated.**
 Regional English, Spanish, Portuguese, Arabic, and other variants are not each
 represented by independent corpora. Mandarin uses the `cmn_hans_cn` configuration.
 Language-to-source details and these limits are recorded in the policy.
+
+## Current v4 results
+
+The [version 4 report](../configs/language-coverage-v4-results.json) evaluates all
+four current model hashes using the [v4 policy](../configs/language-coverage-v4.json).
+All 56 language profiles have evidence. All normalizer comparisons and all
+representable normalized round trips pass. Coverage remains incomplete, so the
+reported status is **complete_with_coverage_gaps**, not a zero-unknown pass.
+
+| FLEURS within each profile's scope | References | Raw unknown-bearing records | Publisher-normalized unknown-bearing records |
+| --- | ---: | ---: | ---: |
+| `original` | 3,400 | 635 | 222 |
+| `latin` | 2,400 | 464 | 195 |
+| `latin-indic` | 2,500 | 159 | 108 |
+| `full` | 3,400 | 191 | 113 |
+
+These scopes contain different language sets: 34 inherited languages for
+`original`/`full`, 24 Latin languages for `latin`, and those 24 plus Arabic for
+`latin-indic`. Raw and publisher-normalized columns are two forms of the same
+references. Counts across those columns must not be added as independent samples.
+The full machine report also evaluates every out-of-scope combination.
+
+| All 22 Indic profiles | Development unknown-bearing records | Reserve unknown-bearing records |
+| --- | ---: | ---: |
+| `latin-indic` | 61 / 33,027 | 0 / 20,055 |
+| `full` | 51 / 33,027 | 0 / 20,055 |
+
+V4 follows the requested original-only Latin repertoire. The earlier added rare
+Latin and Unicode case/decomposition inventories are excluded, so the earlier
+v3 coverage gains do not carry over. Full development has 154 unknown tokens;
+Latin-plus-Indic has 181. The higher unknown counts do not satisfy the previous
+full-model no-regression thresholds. They remain recorded rather than hidden by
+changing those thresholds. Zero reserve unknowns does not erase these measured
+development or FLEURS gaps.
+
+The original baseline is also evaluated on all Indic text, but its required
+Indic scope is Hindi only. It has 201 unknown-bearing Hindi development records
+out of 1,753 and 23 reserve records out of 898. This does not establish support
+for the other 21 Indic profiles.
 
 ## Original v1 baseline
 
@@ -67,11 +109,13 @@ baseline. Repertoire changes should follow independently chosen linguistic or
 Unicode inventories; selecting additions from these examples would make them
 selection data. Existing checkpoints need matching migration and training work.
 
-## Preserved v3 results
+## Historical v3 results
 
-The same frozen text was evaluated again after replacing the bundles. The
-[version 3 report](../configs/language-coverage-v3-results.json) binds the new
+The superseded v3 models were measured on the same frozen text. The
+[version 3 report](../configs/language-coverage-v3-results.json) preserves their
 model hashes and keeps every language, bundle and transcript view explicit.
+V3 retained the original multilingual bank and extra Latin coverage in every
+profile; its results do not qualify the different v4 inventories.
 All 56 profiles have evidence; all representable normalized round trips and
 normalizer comparisons pass.
 
@@ -83,12 +127,11 @@ normalizer comparisons pass.
 | Original Indic reserve | 0 | 0 | 20,055 |
 
 The raw and publisher-normalized rows are two views of the same references.
-The v3 repertoire uses Unicode 17 case and canonical decomposition closure of
+The v3 repertoire used Unicode 17 case and canonical decomposition closure of
 existing single Latin characters; the builder does not select additions from
-these evaluation sentences. This closes the measured Maltese, Latvian uppercase,
-and Turkish combining-dot gaps. All 13,087 original Nemotron text IDs and the original normalizer are
-preserved. ZWNJ still becomes space and Malayalam spelling variants remain
-distinct. The earlier compact v2 candidate is withdrawn.
+these evaluation sentences. That closed the measured Maltese, Latvian uppercase,
+and Turkish combining-dot gaps. V3 preserved all 13,087 original Nemotron text IDs and the original normalizer
+in every profile. The earlier compact v2 candidate is withdrawn.
 
 Coverage is still finite. Raw FLEURS gaps remain for low quotation marks in
 several European languages, Japanese punctuation, Thai `ฯ`, Chinese book-title
@@ -129,6 +172,10 @@ all-language completeness. The Indic manifest must have the exact original
 freeze hash; missing data is not reconstructed from another script or source.
 Use `fetch --offline` to verify and prepare already downloaded TSVs without
 network access.
+
+The default command uses `configs/language-coverage-v4.json` and the separately
+prepared `.cache/language-coverage/prepared-v4` corpus manifest. The source and
+sentence-selection hashes are unchanged from earlier measurements.
 
 The script exits 0 only for `passed_on_supplied_text`. Unknowns in an in-scope
 profile produce `complete_with_coverage_gaps` and exit 2; missing profiles produce

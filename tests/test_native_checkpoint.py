@@ -197,9 +197,52 @@ def test_prompt_registry_keeps_old_slots_and_requires_all_22_targets():
         _prompt_registry(wrong, registry)
 
 
+def test_profile_prompt_registries_filter_names_without_reusing_removed_slots():
+    defaults = SimpleNamespace(num_prompts=64, prompt_dictionary={
+        "auto": 0, "en-US": 1, "en": 1, "hi-IN": 2, "hi": 2,
+        "ar-AR": 3, "ja-JP": 4, "or-KE": 5, "mt-MT": 6, "sl-SI": 7,
+    })
+    original = _prompt_registry(defaults, profile="original")
+    assert original["prompt_dictionary"] == defaults.prompt_dictionary
+    assert not original["target_assignments"]
+    latin = _prompt_registry(defaults, profile="latin")
+    assert latin["prompt_dictionary"] == {"auto": 0, "en-US": 1, "en": 1, "mt-MT": 6, "sl-SI": 7}
+    assert not latin["allocated_this_build"]
+    assert latin["reserved_source_prompt_slots"] == list(range(8))
+    assert not set(range(8)) & set(latin["unused_prompt_slots"])
+    indic = _prompt_registry(defaults, profile="latin-indic")
+    assert len(indic["target_assignments"]) == 22
+    assert not {"ar-AR", "ja-JP", "or-KE"} & set(indic["prompt_dictionary"])
+    assert indic["prompt_dictionary"]["hi"] == indic["prompt_dictionary"]["hi-IN"] == 2
+    assert not set(indic["allocated_this_build"].values()) & set(defaults.prompt_dictionary.values())
+    for profile, registry in (("original", original), ("latin", latin), ("latin-indic", indic)):
+        assert _prompt_registry(defaults, registry, profile=profile)["prompt_dictionary"] == registry["prompt_dictionary"]
+        changed = copy.deepcopy(registry)
+        changed["prompt_dictionary"]["en-US"] = 9
+        with pytest.raises(ValueError, match="slots|upstream prompt assignment"):
+            _prompt_registry(defaults, changed, profile=profile)
+        if profile != "original":
+            changed = copy.deepcopy(registry)
+            changed["prompt_dictionary"]["ja-JP"] = 4
+            with pytest.raises(ValueError, match="profile|target identities"):
+                _prompt_registry(defaults, changed, profile=profile)
+
+
+def test_indic_profile_accepts_validated_full_registry_and_rejects_missing_target():
+    defaults = SimpleNamespace(num_prompts=64, prompt_dictionary={"auto": 0, "en-US": 1, "ar-AR": 2})
+    full = _prompt_registry(defaults)
+    indic = _prompt_registry(defaults, full, profile="latin-indic")
+    assert "ar-AR" not in indic["prompt_dictionary"]
+    assert indic["prompt_dictionary"]["ml-IN"] == full["prompt_dictionary"]["ml-IN"]
+    altered = copy.deepcopy(indic)
+    altered["prompt_dictionary"].pop("ml-IN")
+    with pytest.raises(ValueError, match="identity assignments"):
+        _prompt_registry(defaults, altered, profile="latin-indic")
+
+
 @pytest.fixture(scope="module")
 def clean_checkpoint_bundles(tmp_path_factory):
-    """Use the real preserved v3 recipe while keeping acoustic weights wholly synthetic."""
+    """Use the real profile recipe while keeping acoustic weights wholly synthetic."""
     pytest.importorskip("torch")
     from untok.bundles import PROFILES, load_tokenizer_bundle
     from untok.clean import build_clean_bundles
@@ -210,7 +253,7 @@ def clean_checkpoint_bundles(tmp_path_factory):
     return {profile: load_tokenizer_bundle(output / profile) for profile in PROFILES}
 
 
-@pytest.mark.parametrize("profile", ["full", "latin-indic", "latin"])
+@pytest.mark.parametrize("profile", ["original", "full", "latin-indic", "latin"])
 @pytest.mark.parametrize("source_inventory", ["original_native_base", "original_untok_full_v1"])
 def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
     clean_checkpoint_bundles, tmp_path, profile, source_inventory,
@@ -234,10 +277,12 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
     old, new = inspect_nemo_layout(source), inspect_nemo_layout(target)
     retained = [index for index, dest in enumerate(mapping) if dest is not None]
     removed = [index for index, dest in enumerate(mapping) if dest is None]
-    assert old.blank_id != new.blank_id
-    if is_base:
+    assert (old.blank_id == new.blank_id) == (is_base and profile == "original")
+    if is_base and profile in {"original", "full"}:
         assert not removed
         assert mapping[:-1] == tuple(range(old.blank_id))
+    else:
+        assert removed
     assert mapping[old.blank_id] == new.blank_id
 
     # Mark removed rows with conspicuous values so an initializer accidentally
@@ -253,11 +298,13 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
     initial, policy = initialize_native_added_rows(original, target.state_dict(), old, new, mapping)
     additions = policy["new_model_rows"]
     assert set(additions) == set(range(new.output_size)) - {mapping[index] for index in retained}
-    assert adapter.token_to_id("Ð") in additions
     # ID 13087 was the original blank but denotes '#' in the v1 extension:
     # migration from the base must initialize that text row, not copy blank to it.
-    assert (adapter.token_to_id("#") in additions) == is_base
-    assert adapter.token_to_id("#") != new.blank_id
+    if profile in {"full", "latin-indic"}:
+        assert (adapter.token_to_id("#") in additions) == is_base
+        assert adapter.token_to_id("#") != new.blank_id
+    if profile in {"original", "latin"} or not is_base:
+        assert not additions and policy["policy"] == "no_added_rows"
     expected_mean = original[old.embedding_key][retained[:-1]].double().mean(0).float()
     assert torch.equal(initial[new.embedding_key][additions], expected_mean.expand(len(additions), -1))
     assert torch.equal(

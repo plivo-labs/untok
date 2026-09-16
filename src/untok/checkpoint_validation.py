@@ -66,7 +66,8 @@ def _manifest(path: Path, device: str) -> tuple[dict[str, Any], list[dict[str, A
     return document, requests
 
 
-def _equivalent_inference_config(original: Any, expanded: Any, decoder: str) -> dict[str, Any]:
+def _equivalent_inference_config(original: Any, expanded: Any, decoder: str,
+                                 *, allow_removed_prompts: bool = False) -> dict[str, Any]:
     old, new = _plain(original.cfg), _plain(expanded.cfg)
     for config in (old, new):
         if config.get("decoding", {}).get("strategy") != decoder:
@@ -84,7 +85,10 @@ def _equivalent_inference_config(original: Any, expanded: Any, decoder: str) -> 
         hashes[section] = _canonical_hash(old_value)
     old_prompts = old.get("model_defaults", {}).get("prompt_dictionary", {})
     new_prompts = new.get("model_defaults", {}).get("prompt_dictionary", {})
-    if not old_prompts or any(new_prompts.get(k) != v for k, v in old_prompts.items()):
+    retained_prompts = set(old_prompts) & set(new_prompts)
+    if (not old_prompts or not retained_prompts
+            or any(new_prompts[k] != old_prompts[k] for k in retained_prompts)
+            or (not allow_removed_prompts and set(old_prompts) - set(new_prompts))):
         raise ValueError("Original prompt identities were not preserved")
     return {"config_section_sha256": hashes, "original_prompt_dictionary": old_prompts,
             "expanded_prompt_dictionary": new_prompts}

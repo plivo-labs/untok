@@ -132,7 +132,7 @@ def test_invalid_native_bundle_returns_error(monkeypatch, capsys):
     assert "hash mismatch" in capsys.readouterr().err
 
 
-def test_package_dispatches_all_three_profiles(monkeypatch, capsys):
+def test_package_dispatches_all_four_profiles(monkeypatch, capsys):
     import untok.bundles as bundles
 
     calls = []
@@ -143,7 +143,7 @@ def test_package_dispatches_all_three_profiles(monkeypatch, capsys):
 
     monkeypatch.setattr(bundles, "package_tokenizer_bundles", package)
     assert main(["package", "--bundle", "candidate", "--output", "dist"]) == 0
-    assert calls == [(("candidate", "dist"), {"profiles": ("latin", "latin-indic", "full")})]
+    assert calls == [(("candidate", "dist"), {"profiles": ("original", "latin", "latin-indic", "full")})]
     assert json.loads(capsys.readouterr().out)["packaged"]
 
 
@@ -153,12 +153,12 @@ def test_clean_command_builds_versioned_profiles(monkeypatch, capsys):
     calls = []
     def build(*args):
         calls.append(args)
-        return {"full": {"tokenizer_version": 3}}
+        return {"full": {"tokenizer_version": 4}}
 
     monkeypatch.setattr(clean, "build_clean_bundles", build)
     assert main(["clean", "--bundle", "source", "--output", "cleaned"]) == 0
     assert calls == [("source", "cleaned")]
-    assert json.loads(capsys.readouterr().out)["full"]["tokenizer_version"] == 3
+    assert json.loads(capsys.readouterr().out)["full"]["tokenizer_version"] == 4
 
 
 def test_native_migration_requires_source_pin_and_dispatches_native(monkeypatch, capsys):

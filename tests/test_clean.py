@@ -1,4 +1,4 @@
-"""Native ID preservation and artifact integrity of append-only Unigram bundles."""
+"""Original, compact and expanded native profile contracts and integrity."""
 from __future__ import annotations
 
 import hashlib
@@ -11,8 +11,8 @@ import sentencepiece as spm
 from sentencepiece import sentencepiece_model_pb2 as pb
 
 from untok.bundles import PROFILES, load_tokenizer_bundle
-from untok.clean import ALGORITHM, CleanTokenizerAdapter, build_clean_bundles
-from untok.unigram import validate_native_prefix
+from untok.clean import ALGORITHM, LEGACY_ALGORITHM, CleanTokenizerAdapter, build_clean_bundles
+from untok.unigram import build_native_tokenizer, native_id_map, validate_native_prefix
 
 
 DATA = Path(__file__).resolve().parents[1] / "src" / "untok" / "data"
@@ -39,7 +39,7 @@ def clean_bundles(tmp_path_factory):
     return output, adapters
 
 
-@pytest.mark.parametrize("profile", PROFILES)
+@pytest.mark.parametrize("profile", ["original", "full"])
 def test_every_original_id_piece_score_type_and_metadata_is_unchanged(clean_bundles, profile):
     output, adapters = clean_bundles
     base_bytes = (DATA / "source" / "base-tokenizer.model").read_bytes()
@@ -58,6 +58,28 @@ def test_every_original_id_piece_score_type_and_metadata_is_unchanged(clean_bund
         model.ClearField("pieces")
         model.trainer_spec.ClearField("vocab_size")
     assert target.SerializeToString() == base.SerializeToString()
+
+
+def test_original_is_an_exact_copy_and_latin_never_adds_pieces(clean_bundles):
+    output, adapters = clean_bundles
+    original = (DATA / "source/base-tokenizer.model").read_bytes()
+    assert (output / "original/tokenizer.model").read_bytes() == original
+    base = pb.ModelProto.FromString(original)
+    originals = {piece.piece for piece in base.pieces}
+    assert set(adapters["latin"].vocab) < originals
+    assert adapters["original"].blank_id == 13087
+    assert adapters["original"].source_native_to_target_native == tuple(range(13088))
+    for profile in PROFILES:
+        assert "ð" not in adapters[profile].vocab  # removed rare-Latin source extension
+        assert "Ð" not in adapters[profile].vocab  # removed later case-closure extension
+    for profile in ("latin", "latin-indic"):
+        assert "<bg-BG>" not in adapters[profile].vocab
+        assert "<ru-RU>" not in adapters[profile].vocab
+        assert "<ar-AR>" not in adapters[profile].vocab
+        assert "<en-US>" in adapters[profile].vocab
+        assert "▁в" not in adapters[profile].vocab
+    assert "<hi-IN>" not in adapters["latin"].vocab
+    assert "<hi-IN>" in adapters["latin-indic"].vocab
 
 
 @pytest.mark.parametrize("profile", ["full", "latin-indic"])
@@ -120,7 +142,7 @@ def test_native_normalization_and_whitespace_have_no_exceptions(clean_bundles, p
         "a\u200cb", "ന്\u200dറ", "അവര്\u200d", "അവർ",
     ]:
         assert current.normalize(text) == original.normalize(text)
-    for text in ["  hello  world  ", "\u200d", "Ð Þ Ā Ċ Ə"]:
+    for text in ["  hello  world  ", "a b"]:
         ids = adapters[profile].text_to_ids(text)
         assert adapters[profile].unk_id not in ids
         assert adapters[profile].ids_to_text(ids) == text
@@ -128,7 +150,7 @@ def test_native_normalization_and_whitespace_have_no_exceptions(clean_bundles, p
 
 @pytest.mark.parametrize("profile", PROFILES)
 def test_only_appended_pieces_must_be_stable_and_match_their_best_native_path(clean_bundles, profile):
-    output, _ = clean_bundles
+    output, adapters = clean_bundles
     model = _model(output / profile / "tokenizer.model")
     normalizer = spm.SentencePieceNormalizer(
         model_proto=model.SerializeToString(), add_dummy_prefix=False,
@@ -142,9 +164,11 @@ def test_only_appended_pieces_must_be_stable_and_match_their_best_native_path(cl
     strings = [piece.piece for piece in model.pieces]
     assert len(strings) == len(set(strings))
     base_size = len(_model(DATA / "source" / "base-tokenizer.model").pieces)
-    native_scores = [piece.score for piece in model.pieces[:base_size]
+    native_scores = [piece.score for piece in _model(DATA / "source/base-tokenizer.model").pieces
                      if piece.type == pb.ModelProto.SentencePiece.NORMAL]
-    for piece in model.pieces[base_size:]:
+    for piece, source_id in zip(model.pieces, adapters[profile].subset_native_to_full_native[:-1]):
+        if source_id < base_size:
+            continue
         assert min(native_scores) <= piece.score <= max(native_scores)
         if piece.type != pb.ModelProto.SentencePiece.NORMAL:
             continue
@@ -172,21 +196,29 @@ def test_retained_rows_new_rows_and_blank_namespaces_are_unambiguous(clean_bundl
     assert forward[-1] == adapter.source_native_to_target_native[-1] == adapter.blank_id
     assert reverse[-1] == len(original.pieces)
     assert adapter.source_native_to_target_native[:-1] == forward[:len(base.pieces)]
-    assert adapter.source_native_to_target_native[:-1] == tuple(range(len(base.pieces)))
-    assert adapter.id_map.hf_pad_id == 13087
-    assert adapter.id_map.hf_blank_id == 13088
+    if profile in {"original", "full"}:
+        assert adapter.source_native_to_target_native[:-1] == tuple(range(len(base.pieces)))
+        assert adapter.id_map.hf_pad_id == 13087
+        assert adapter.id_map.hf_blank_id == 13088
+    else:
+        assert any(index is None for index in adapter.source_native_to_target_native[:-1])
+        assert adapter.id_map.hf_pad_id == len(target.pieces)
+        assert adapter.id_map.hf_blank_id == len(target.pieces) + 1
+    assert None not in reverse[:-1]
     for new_id, old_id in enumerate(reverse[:-1]):
-        if old_id is None:
-            assert target.pieces[new_id].score == -32.0
-            continue
         assert forward[old_id] == new_id
         assert target.pieces[new_id].SerializeToString() == original.pieces[old_id].SerializeToString()
     assert "\u200c" not in adapter.vocab
-    assert reverse[adapter.token_to_id("Ð")] is None
+    assert "Ð" not in adapter.vocab
     for piece in ["？", "⁇", "Ａ", "，", "▁anh", "▁в"]:
         old_id = next(i for i, row in enumerate(original.pieces) if row.piece == piece)
-        assert forward[old_id] == old_id
-        assert adapter.token_to_id(piece) == old_id
+        if profile in {"original", "full"}:
+            assert forward[old_id] == old_id
+            assert adapter.token_to_id(piece) == old_id
+        elif piece in adapter.vocab:
+            assert forward[old_id] == adapter.token_to_id(piece)
+        else:
+            assert forward[old_id] is None
     with pytest.raises(ValueError, match="padding"):
         adapter.public_ids_to_text([adapter.id_map.hf_pad_id])
     with pytest.raises(ValueError, match="blank"):
@@ -241,7 +273,8 @@ def test_shipped_profiles_match_the_reproducible_recipe(clean_bundles):
     for profile in PROFILES:
         manifest = json.loads((DATA / profile / "manifest.json").read_text())
         assert manifest["algorithm"] == ALGORITHM
-        assert _files(output / profile) == _files(DATA / profile)
+        assert {name: raw for name, raw in _files(output / profile).items()
+                if name != "THIRD_PARTY.md"} == _files(DATA / profile)
 
 
 def test_zip_resources_keep_native_ids_and_normalization_after_extraction(tmp_path, monkeypatch):
@@ -253,6 +286,7 @@ def test_zip_resources_keep_native_ids_and_normalization_after_extraction(tmp_pa
         for directory in (DATA / "full", DATA / "extension-v3"):
             for path in directory.iterdir():
                 stream.write(path, "data/" + path.relative_to(DATA).as_posix())
+        stream.write(DATA / "source/selection.json", "data/source/selection.json")
     with zipfile.ZipFile(archive) as stream:
         monkeypatch.setattr(bundles.resources, "files", lambda package: zipfile.Path(stream))
         adapter = bundles.load_tokenizer_bundle("full")
@@ -273,3 +307,70 @@ def test_packaging_a_clean_subset_reconstructs_the_other_profiles(clean_bundles,
     assert receipt["full_tokenizer_sha256"] == hashlib.sha256((DATA / "source" / "tokenizer.model").read_bytes()).hexdigest()
     for profile in PROFILES:
         assert _files(output / profile) == _files(original / profile)
+
+
+def test_exact_native_identity_keeps_historical_trainer_vocabulary_declaration(tmp_path):
+    from untok.bundles import package_tokenizer_bundles
+
+    base = pb.ModelProto()
+    base.trainer_spec.model_type = pb.TrainerSpec.UNIGRAM
+    base.trainer_spec.unk_id = 0
+    base.trainer_spec.bos_id = base.trainer_spec.eos_id = base.trainer_spec.pad_id = -1
+    base.trainer_spec.vocab_size = 256  # Historical declaration is not the actual inventory size.
+    base.normalizer_spec.name = "identity"
+    for text, score, kind in [("<unk>", 0, 2), ("▁", 0, 1), ("a", -3, 1)]:
+        base.pieces.add(piece=text, score=score, type=kind)
+    raw = base.SerializeToString()
+    base_path = tmp_path / "base.model"
+    base_path.write_bytes(raw)
+    selection = tmp_path / "selection.json"
+    selection.write_text(json.dumps({"base_tokenizer_sha256": hashlib.sha256(raw).hexdigest(),
+                                    "additions": [{"piece": "b", "score": -2}]}))
+    source = tmp_path / "source"
+    build_native_tokenizer(base_path, selection, source)
+    # A byte-identical source can retain its historical declared size. This
+    # low-level identity contract does not make an arbitrary base Nemotron.
+    assert validate_native_prefix(raw, raw)["native_entries_preserved"] == 3
+    mapping = native_id_map(raw, raw)
+    assert mapping.model_blank_id == 3
+    assert base_path.read_bytes() == raw
+    destination = tmp_path / "packaged"
+    with pytest.raises(ValueError, match="pinned original"):
+        package_tokenizer_bundles(source, destination, profiles=("original",), make_zips=False)
+    assert not destination.exists()
+
+
+def test_rehashed_original_bundle_cannot_replace_the_pinned_base(clean_bundles, tmp_path):
+    output, _ = clean_bundles
+    altered = tmp_path / "forged-original"
+    shutil.copytree(output / "original", altered)
+    manifest = json.loads((altered / "manifest.json").read_text())
+    for name in ("base-tokenizer.model", "full-tokenizer.model", "tokenizer.model"):
+        path = altered / name
+        model = _model(path)
+        model.pieces[2].score -= 0.01
+        path.write_bytes(model.SerializeToString())
+        manifest["files"][name] = hashlib.sha256(path.read_bytes()).hexdigest()
+    manifest["base_tokenizer_sha256"] = manifest["files"]["base-tokenizer.model"]
+    manifest["full_tokenizer_sha256"] = manifest["files"]["full-tokenizer.model"]
+    manifest["tokenizer_sha256"] = manifest["files"]["tokenizer.model"]
+    (altered / "manifest.json").write_text(json.dumps(manifest))
+    with pytest.raises(ValueError, match="pinned original"):
+        load_tokenizer_bundle(altered)
+
+
+def test_frozen_v3_bundles_remain_loadable_after_profile_contract_changes(tmp_path):
+    from untok.clean import _preserved_v3_artifacts
+
+    files, manifest, _, _ = _preserved_v3_artifacts(
+        (DATA / "source/base-tokenizer.model").read_bytes(),
+        (DATA / "source/tokenizer.model").read_bytes(), "latin")
+    assert manifest["algorithm"] == LEGACY_ALGORITHM
+    for name, content in files.items():
+        (tmp_path / name).write_bytes(content)
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    adapter = load_tokenizer_bundle(tmp_path)
+    assert adapter.vocab_size == 13573
+    assert adapter.token_to_id("▁в") == 45
+    assert "Ð" in adapter.vocab
+    assert hashlib.sha256(adapter.model_bytes).hexdigest() == "e250b6b2f47ed337f13c3a957637feada09dbcf6e6d1bf628119647eadb70f12"

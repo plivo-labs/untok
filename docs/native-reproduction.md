@@ -2,7 +2,7 @@
 
 The scripts in `scripts/native_study/` run source acquisition, corpus preparation,
 freezing, candidate-pool training, constrained score fitting and joint bank merging.
-They operate on explicit input/output directories. They never overwrite the three
+They operate on explicit input/output directories. They never overwrite the four
 packaged tokenizer models. Corpus text stays in the chosen study directory.
 
 There are two distinct reproducibility contracts:
@@ -12,7 +12,7 @@ There are two distinct reproducibility contracts:
    `native-study-historical-intake.json` publishes the 91 intake hashes and roles.
    These identify the original research data if its snapshots are available.
    The base-plus-selection build reconstructs the full v1 source byte for byte.
-   Reconstructing the current packaged v3 profiles then requires the pinned
+   Reconstructing the current packaged v4 profiles then requires the pinned
    [normalization and cleanup recipe](native-preservation.md), via `untok clean`.
 2. **A corrected new study.** The portable acquisition and fitting scripts produce
    a new freeze and selection. The written split recipe is explicitly versioned;
@@ -203,7 +203,7 @@ After joint gates pass, build and validate a separate output bundle using the
 normal `untok build` and `untok validate` commands. Freeze the final selection
 receipt before reserved evaluation. A new corpus/selection is a candidate; it
 does not inherit the historical tokenizer's validation or acoustic evidence.
-This fitting path produces the append-only source format. The shipped v3
+This fitting path produces the append-only source format. The shipped v4
 cleanup pins the historical full source and rejects a different newly fitted
 model. Applying cleanup to a new selection requires an explicit new recipe,
 normalizer/input pins and its own evaluation; it must not silently replace the

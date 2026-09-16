@@ -1,0 +1,833 @@
+{
+  "fleurs_revision": "70bb2e84b976b7e960aa89f1c648e09c59f894dd",
+  "frozen_indic_manifest_sha256": "b31dfd0d45542614ab51bb9c49621d2bbb100747bfe8f93f83a28df599973188",
+  "profile_contracts": {
+    "full": "Original Nemotron prefix plus selected Indic/shared additions; no added rare-Latin or Unicode case/decomposition inventory.",
+    "latin": "Only original Nemotron Latin/shared pieces and relevant existing locale tags.",
+    "latin-indic": "Latin plus 22 target Indic profiles, shared pieces and relevant existing locale tags.",
+    "original": "Exact original Nemotron model; measured across all supplied corpora, with inherited-language scopes including Hindi."
+  },
+  "profiles": {
+    "ar": {
+      "expected_bundles": [
+        "original",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "ar_eg",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Arabic",
+      "selected_sha256": "9b56705a41225163fd3edf9d7a53cb32a966ced77d9a66e137411cfb9553fb2e",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "3c9ea61dfd884a47e03ee33c4ef601bed0a1142ce7e5b279cccd0cf321792913"
+    },
+    "as": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Assamese",
+      "script": "Bengali",
+      "source_kind": "frozen_indic"
+    },
+    "bg": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "bg_bg",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Bulgarian",
+      "selected_sha256": "c3adf8e2b14d7b0eb37d72edba3874fa3e90646528c8865508a7a1ae6486664d",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "b95ca8029c9c70c3ebaebc3ce8e3a89bd2eaf3fbffe6ed0c07449e24a8f1cf49"
+    },
+    "bn": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Bengali",
+      "script": "Bengali",
+      "source_kind": "frozen_indic"
+    },
+    "brx": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Bodo",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "cs": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "cs_cz",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Czech",
+      "selected_sha256": "be285b967614b0fe9c2d0dc1e5774fc8cacdbda325aa713d14c760e7ed42312a",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "0f49f3fadd4e4d44ef2b36fee059b48424a83bfb2f4f37d9774ac057b100e806"
+    },
+    "da": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "da_dk",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Danish",
+      "selected_sha256": "d6264417d6588511db326f21d0e8980530f85d7016725512222569b84f90219a",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "285adf490de5653b84fc4d901ec02e5b2d47a4774414a46d8501516ccf06ad33"
+    },
+    "de": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "de_de",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "German",
+      "selected_sha256": "ac359f870b338710b8b5f552d1497060b5bb9e0748d93d25e1ce4550d196b286",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "055b6ddecc9ad493d9ead86babe3ebe225148dd3c174fa6f95cb83a4f9586e18"
+    },
+    "doi": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Dogri",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "el": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "el_gr",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Greek",
+      "selected_sha256": "79c31a9a6e3fdceb94b745750e91238f7c8317c55f406d06cf39c1391d82c6a1",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "6ece1d3cd7e28b9233d36288f7611a69c8d5e2040ab1c0393116b826cc514c38"
+    },
+    "en": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "en_us",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "English",
+      "selected_sha256": "f9858aaed6df757698bbeeb74da2a4a3cb7988db5b9f49e44fd131fc54570a31",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "9d57ee7e91e9d4c92edb39f6bbea668ef8dc2a3ff96eb510d5580b2ad05d17ec"
+    },
+    "es": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "es_419",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Spanish",
+      "selected_sha256": "f72b515c9f628fe22e739ab440d4074bb0973a329c6d031c256b70ea7ec17e39",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "352b2a5f03f02fe752254fab737f76519963650f4630d2fb63957177aeec927f"
+    },
+    "et": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "et_ee",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Estonian",
+      "selected_sha256": "0cf95d6a6f1de20dd4d10a9a5b4c5379a83df5330e947fbafa51af847b871a9c",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "d31ee79c15d458077a9238bf51429f275089c26e8fa4cdab84241866e1351618"
+    },
+    "fi": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "fi_fi",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Finnish",
+      "selected_sha256": "c24da2e0c1a23acfdb6f94efd636d340e013c90e65759f68c277e563cf1d49e7",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "9e3736736eedb7e09b149d5c176c558298df9e286cb8ccef428b36a8eeb548bd"
+    },
+    "fr": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "fr_fr",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "French",
+      "selected_sha256": "310961eeb7c1098fe3883296c8951697deccb300d9b03cd7a91304d191d20793",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "3e0b792358c1cb4a426fe1c18fc1571d5406b390d738a2ed1bfd3c8b9d28de44"
+    },
+    "gu": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Gujarati",
+      "script": "Gujarati",
+      "source_kind": "frozen_indic"
+    },
+    "he": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "he_il",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Hebrew",
+      "selected_sha256": "6923b67b29a5b7c2d09a385f851fcdef0f78891e7f0e2e5729f01543532072ef",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "20179d9b10811211b767ceb4f63c41d66f8ead4f0638f7d601ccc4c508506726"
+    },
+    "hi": {
+      "expected_bundles": [
+        "original",
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Hindi",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "hr": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "hr_hr",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Croatian",
+      "selected_sha256": "deb1c1a21c10b335356c9e12552b7e9120ba0891a8db9ea80579321a144da49b",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "5b7eaaf2e136e3580b68461d46ccbb7e9cec0b8f7e4374b80e0ff57061cd4b02"
+    },
+    "hu": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "hu_hu",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Hungarian",
+      "selected_sha256": "ad457e1138c403d85565890d41b2369d0fd56ec849e31a5f541846e2de5c9a97",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "dcdd4be6792bcf24e8f9e5fcdc5c81b5fca9de0ba4f8e2b17f5ca90c4fa798a6"
+    },
+    "it": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "it_it",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Italian",
+      "selected_sha256": "f22fed76a312f4b065ef1d6daa53ef9d57b8b47cbdf1c1a15ed2c33797630151",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "88c805acbbfee426f80164abdd5b696076d09188f6fe7a7c9a69a21c9e8349df"
+    },
+    "ja": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "ja_jp",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Japanese",
+      "selected_sha256": "c9a64628e5f4a4d29178ab83ee962f5be822a50396268b019b3cb2e81d668870",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "92beded0999347ad5b8599fe70940e2e7b9232c67c426defb258e596ade94f48"
+    },
+    "kn": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Kannada",
+      "script": "Kannada",
+      "source_kind": "frozen_indic"
+    },
+    "ko": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "ko_kr",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Korean",
+      "selected_sha256": "c98ca0985817fe1826312f9aa327b4ac0f74978c7061a219fcbca8029e3ebe9b",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "6b236de107c6a1672233f6d710d26adfdb55570a3e6e35aca9dc4ff2be01cea4"
+    },
+    "kok": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Konkani",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "ks": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Kashmiri",
+      "script": "Arabic",
+      "source_kind": "frozen_indic"
+    },
+    "lt": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "lt_lt",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Lithuanian",
+      "selected_sha256": "f61581eecc94d7b3aea5d37360c51964fb3445ffbfb468309d188f698e34d583",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "3ed64f3769bf7077954db0204ff7a22071c9ba83ebfa612f97ae0f66dfcd8c91"
+    },
+    "lv": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "lv_lv",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Latvian",
+      "selected_sha256": "0d57db147936e40c2ac25b686c147addd81a018f84225ce91e009c7b046364c7",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "ba5ff4eeabb796ff7a0de40e62af79b8d88707fb47390b17f83ef683f4ceb022"
+    },
+    "mai": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Maithili",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "ml": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Malayalam",
+      "script": "Malayalam",
+      "source_kind": "frozen_indic"
+    },
+    "mni": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Manipuri",
+      "script": "Meetei Mayek",
+      "source_kind": "frozen_indic"
+    },
+    "mr": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Marathi",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "mt": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "mt_mt",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Maltese",
+      "selected_sha256": "9839dd6f65691a02c993cbf53f5961080227cdb520de00601371027dac7cc169",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "1f09eb30c78b3ecaa73645b4991b58cb7979e198253bd6a7c0e1f318efa8e873"
+    },
+    "ne": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Nepali",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "nl": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "nl_nl",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Dutch",
+      "selected_sha256": "3ad3ab47f0c4e56a2b7c0e5aeb6ab5cc962493b658b09aac20b1027e2981b8d1",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "fa4f70d3a14625a0bba45dc7fd7bdbec8564caf0994833ba05c601250454ac64"
+    },
+    "no": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "nb_no",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage.",
+        "Bokmål only. Nynorsk has no separate corpus in this validation and is not validated by these measurements."
+      ],
+      "name": "Norwegian",
+      "selected_sha256": "886a75e5aedb9eeb214312c89e7823958141be534a5cec93b3e44297cd656471",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "21fbcf2d668089bcfefce013c18740f83d4ab8e1de9e2c5dc67d47a41f9956bd"
+    },
+    "or": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Odia",
+      "script": "Odia",
+      "source_kind": "frozen_indic"
+    },
+    "pa": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Punjabi",
+      "script": "Gurmukhi",
+      "source_kind": "frozen_indic"
+    },
+    "pl": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "pl_pl",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Polish",
+      "selected_sha256": "b94cea2d1fde94e7f9bb011a201025c077ccb01951e6cd220317242e6c04257f",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "c4d7be870be2d252184fc7a415117064a386e39a04e7eb5bfefb0e70c4a1607c"
+    },
+    "pt": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "pt_br",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Portuguese",
+      "selected_sha256": "7571c781bd4b3d4c9e2cf6bd75f8cc82a08bf736f5d09190a22bfa431057e798",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "69a60f2ef2964da22ac38c3fe223a5ff5d59b9d7fb8ccfcc7003737fc7a1f69c"
+    },
+    "ro": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "ro_ro",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Romanian",
+      "selected_sha256": "c576758e1ae7c8141e59ac0dcd6697c8529e2ece87e1ef3c57e62f92a70b10d1",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "3a79537ef1edcf3049a956134e173479264f0fa07d3681f389305d6e35f4b4af"
+    },
+    "ru": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "ru_ru",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Russian",
+      "selected_sha256": "3cefc5b1301b46477c7ecb4c05f2728cdcabd45e74edf51674de265a2c4837da",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "25d9dc88a7533fc0f303354a8e6d3c8186c557229c9a0024487090a11226171e"
+    },
+    "sa": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Sanskrit",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "sat": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Santali",
+      "script": "Ol Chiki",
+      "source_kind": "frozen_indic"
+    },
+    "sd": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Sindhi",
+      "script": "Devanagari",
+      "source_kind": "frozen_indic"
+    },
+    "sk": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "sk_sk",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Slovak",
+      "selected_sha256": "e829e1de2c058282ce21776d4bd77cfbe3d8b7414c9d92b2b9bdab2ae41bc556",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "b8879ab47e741b4ad5b7bf17cab48594e7fc5bd3a088c763448e20e53b6f135b"
+    },
+    "sl": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "sl_si",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Slovenian",
+      "selected_sha256": "0a5f247a6c1099ae1a1551e842bf82e93e53f935f4271a6404fb8488b92675ed",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "e5e6353d3254c3505d74c8be7394927a222445cd44650465aa1c7f570c34bf1f"
+    },
+    "sv": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "sv_se",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Swedish",
+      "selected_sha256": "aacfce23517c9169b1cc1aa12283356b25d1773e8bd08b877d588c00271b40c4",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "86a2c98b9105cb65c7d4b358e71aec699f02e826bafeed7a9f97b539abbcaf6e"
+    },
+    "ta": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Tamil",
+      "script": "Tamil",
+      "source_kind": "frozen_indic"
+    },
+    "te": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Telugu",
+      "script": "Telugu",
+      "source_kind": "frozen_indic"
+    },
+    "th": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "th_th",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Thai",
+      "selected_sha256": "f131f009b2c9e091b9efb3d9ee79f91c896f8415e527a183c5205f5bc0fe3d08",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "214f74aa346dd643390e1a629e647d662697c542bff1a318c78d3274e2662be2"
+    },
+    "tr": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "tr_tr",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Turkish",
+      "selected_sha256": "2f419cf8bb1880493b2547c6427e8b86f834592c27cf868f9d20664f0234f12f",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "4b2ee8cac0eef03788fbb433d8568ac41ef5c2b037968737095ff6ab1e80ec6f"
+    },
+    "uk": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "uk_ua",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Ukrainian",
+      "selected_sha256": "6884590061ecdc8ec666ee2886ba673d9f244fa253836da97c0a57139ea10e1b",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "0fb2f48b216b74d503c3cebb80906407fd812cd464ad2eb61baf840f2bcb6951"
+    },
+    "ur": {
+      "expected_bundles": [
+        "latin-indic",
+        "full"
+      ],
+      "limitations": [
+        "Original 22-profile development/reserve freeze; previously evaluated, not a newly untouched holdout.",
+        "Reserve records are all IndicVoices; no donor/native pretraining independence claim."
+      ],
+      "name": "Urdu",
+      "script": "Arabic",
+      "source_kind": "frozen_indic"
+    },
+    "vi": {
+      "expected_bundles": [
+        "original",
+        "latin",
+        "latin-indic",
+        "full"
+      ],
+      "fleurs_config": "vi_vn",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage."
+      ],
+      "name": "Vietnamese",
+      "selected_sha256": "0e675c2fe607eb27e73287df9439a2ab66fd16063a039eccda3d359210c8370e",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "c9bc17cede9765b1c75cb7a608f7066cb6bb6f8245cc75d721a5217a5dffb414"
+    },
+    "zh": {
+      "expected_bundles": [
+        "original",
+        "full"
+      ],
+      "fleurs_config": "cmn_hans_cn",
+      "limitations": [
+        "Public read-speech reference text; not proof of unseen donor/native pretraining or dialect coverage.",
+        "FLEURS cmn_hans_cn: simplified Mandarin reference text, not all Chinese writing conventions."
+      ],
+      "name": "Mandarin Chinese",
+      "selected_sha256": "2b2fe04403e6606ef4747207d4ab28571497ab7e30c032d59b4275aea90ce84b",
+      "source_kind": "fleurs_dev",
+      "source_sha256": "6b4efd804b543048feb278db06f3b58b5ea171cdd4ba072e328ad630ca25384b"
+    }
+  },
+  "records_per_language": 100,
+  "schema_version": 1,
+  "scope": "Text-only v4 evidence across four vocabulary profiles. Original is the exact Nemotron baseline; compact subsets have explicit script and existing-tag scopes. No profile imports extra rare-Latin or Unicode case/decomposition inventories. FLEURS sampling is unchanged from the pinned earlier selection. Raw and publisher-normalized forms share records; original Indic dev/reserve is previously evaluated data; synthetic concatenations are not natural code-switch evidence. No speech, dialect, arbitrary-Unicode, donor-pretraining independence or Norwegian Nynorsk certification.",
+  "source_card": "https://huggingface.co/datasets/google/fleurs/blob/70bb2e84b976b7e960aa89f1c648e09c59f894dd/README.md",
+  "source_license": "CC-BY-4.0",
+  "synthetic_code_switch_records": 10,
+  "tokenizer_version": 4
+}

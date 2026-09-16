@@ -1,12 +1,12 @@
 # Historical v1 native compatibility results
 
-These results apply to the original v1 bundles only. The replacement v3
-profiles retain original text IDs and normalization, and append new pieces. Their real
-checkpoint migrations passed exact weight checks before save and after reload;
-see the [v3 migration results](../configs/native-checkpoint-v3-results.json).
-Paired acoustic validation has not been run for v3. The checks below must not be
-used as evidence that v3 preserves speech behavior.
-See the current [migration guide](native-checkpoint.md).
+These results apply to the original v1 bundles only. The current v4 profiles
+have different vocabulary contracts: `original` is the exact native tokenizer,
+`full` retains its prefix, and `latin`/`latin-indic` are compact script subsets.
+The [v3 migration results](../configs/native-checkpoint-v3-results.json) describe
+the superseded v3 artifacts and are also historical evidence. Neither report
+establishes current v4 checkpoint or speech compatibility. See the current
+[migration guide](native-checkpoint.md).
 
 Validation date: 7 September 2026. These checks use the pinned original
 Nemotron 3.5 ASR streaming 0.6B checkpoint and its actual native Unigram model.

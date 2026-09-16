@@ -1,4 +1,4 @@
-"""Validate append-only cleanup while preserving the original Nemotron model."""
+"""Validate native profile provenance, retained rows and scoped corpus evidence."""
 from __future__ import annotations
 
 import hashlib
@@ -37,8 +37,76 @@ def _source_selection(manifest: dict) -> tuple[dict, str]:
     return selection, digest
 
 
+def _retained_inventory(adapter, manifest):
+    """Independently check saved maps and the permitted metadata changes."""
+    from .runtime import IdMap
+
+    base, full, model = pb.ModelProto(), pb.ModelProto(), pb.ModelProto()
+    base.ParseFromString(adapter.base_model_bytes)
+    full.ParseFromString(adapter.full_model_bytes)
+    model.ParseFromString(adapter.model_bytes)
+    validate_native_prefix(adapter.base_model_bytes, adapter.full_model_bytes)
+    base_size, size = len(base.pieces), len(model.pieces)
+    mapping = adapter.full_native_to_subset_native
+    base_mapping = adapter.source_native_to_target_native
+    if (len(mapping) != len(full.pieces) + 1 or mapping[-1] != size
+            or tuple(base_mapping) != tuple(mapping[:base_size]) + (size,)):
+        raise ValueError("Native row mapping disagrees with source inventories")
+    mapped = set()
+    retained_base = set()
+    for old, new in enumerate(mapping[:-1]):
+        if new is None:
+            continue
+        if type(new) is not int or not 0 <= new < size or new in mapped:
+            raise ValueError("Native row mapping must be injective and contain text IDs only")
+        mapped.add(new)
+        if full.pieces[old].SerializeToString() != model.pieces[new].SerializeToString():
+            raise ValueError(f"Native piece message changed at source ID {old}")
+        if old < base_size:
+            retained_base.add(new)
+    legacy = manifest["tokenizer_version"] == 3
+    if not legacy and mapped != set(range(size)):
+        raise ValueError("V4 profile contains text rows without pinned source provenance")
+    prefix_preserved = legacy or adapter.profile in {"original", "full"}
+    if prefix_preserved:
+        prefix = validate_native_prefix(adapter.base_model_bytes, adapter.model_bytes)
+        expected_public = native_id_map(adapter.base_model_bytes, adapter.model_bytes)
+        if not legacy and adapter.profile == "original" and adapter.model_bytes != adapter.base_model_bytes:
+            raise ValueError("Original profile must preserve the exact native model bytes")
+    else:
+        expected = pb.ModelProto()
+        expected.CopyFrom(base)
+        retained_strings = {piece.piece for piece in model.pieces}
+        for field in ("user_defined_symbols", "control_symbols"):
+            values = [value for value in getattr(expected.trainer_spec, field) if value in retained_strings]
+            expected.trainer_spec.ClearField(field)
+            getattr(expected.trainer_spec, field).extend(values)
+        for field in ("unk_id", "bos_id", "eos_id", "pad_id"):
+            old_id = getattr(base.trainer_spec, field)
+            if old_id >= 0:
+                if base_mapping[old_id] is None:
+                    raise ValueError("Profile removed required native special ID")
+                if base_mapping[old_id] != old_id:
+                    setattr(expected.trainer_spec, field, base_mapping[old_id])
+        actual = pb.ModelProto()
+        actual.CopyFrom(model)
+        for metadata in (expected, actual):
+            metadata.ClearField("pieces")
+            metadata.trainer_spec.ClearField("vocab_size")
+        if expected.SerializeToString() != actual.SerializeToString() or model.trainer_spec.vocab_size != size:
+            raise ValueError("Native metadata changed outside compact vocabulary declarations")
+        prefix = {"native_entries_preserved": len(retained_base), "native_vocabulary_size": size,
+                  "new_pieces": size - len(retained_base), "base_tokenizer_sha256": _digest(adapter.base_model_bytes),
+                  "tokenizer_sha256": _digest(adapter.model_bytes)}
+        expected_public = IdMap(tuple(range(size)) + (None, size), tuple(range(size)) + (size + 1,),
+                                size, size + 1, size, _digest(adapter.model_bytes), _digest(adapter.base_model_bytes))
+    prefix["preserved"] = prefix_preserved
+    return model, base, retained_base, prefix, expected_public
+
+
 def _roles(source: dict, adapter, cleanup: dict) -> tuple[dict, dict]:
     from .bundles import character_allowed
+    from .profile_policy import indic_addition_allowed
 
     proc = adapter.backend
     normalizer = spm.SentencePieceNormalizer(
@@ -48,8 +116,15 @@ def _roles(source: dict, adapter, cleanup: dict) -> tuple[dict, dict]:
     retained = set(adapter.vocab)
     optional, required, required_text = set(), set(), {}
     changed_roles = []
+    versioned_profiles = cleanup.get("profile_policy") is not None
+    full = pb.ModelProto()
+    full.ParseFromString(adapter.full_model_bytes)
+    source_pieces = {piece.piece: piece for piece in full.pieces}
     for entry in source["additions"]:
         piece = entry["piece"]
+        if versioned_profiles and (adapter.profile in {"original", "latin"}
+                                   or not indic_addition_allowed(source_pieces[piece], entry)):
+            continue
         canonical = normalizer.normalize(piece.replace("▁", " "))
         if entry.get("required_reasons"):
             if not canonical or not all(character_allowed(c, adapter.profile) for c in canonical):
@@ -62,8 +137,7 @@ def _roles(source: dict, adapter, cleanup: dict) -> tuple[dict, dict]:
                                       "retained_whole_piece": canonical in retained})
         elif piece in retained:
             optional.add(piece)
-    # New case-preserving Latin character coverage is
-    # required even when the old frozen training mix never contained it.
+    # Historical v3 introduced required case/decomposition coverage.
     required.update(entry["piece"] for entry in cleanup["added"])
     optional -= required
     selection = {"data_manifest_sha256": source.get("data_manifest_sha256"),
@@ -87,9 +161,10 @@ def validate_clean_tokenizer(
 ) -> dict:
     """Verify native identity, addition quality and fresh target corpus evidence.
 
-    Every original Nemotron piece message and model setting is immutable except
-    the enlarged vocabulary length. Inherited inventory limitations are reported
-    independently; additions must pass every quality gate. Training text is opened
+    Every retained source piece message is immutable. Original/full preserve
+    native text IDs; compact profiles have explicit row maps and only change
+    vocabulary declarations. Inherited limitations are reported independently;
+    additions must pass every quality gate. Training text is opened
     for usage checks, and reserve access requires an exact artifact receipt.
     """
     if phase not in {"dev", "reserve"} or isinstance(max_examples, bool) or not isinstance(max_examples, int) or max_examples < 0:
@@ -103,17 +178,15 @@ def validate_clean_tokenizer(
             raise ValueError(f"Policy {field} disagrees with clean bundle")
     proc = adapter.backend
     source_proc = spm.SentencePieceProcessor(model_proto=adapter.full_model_bytes)
-    model, source_base = pb.ModelProto(), pb.ModelProto()
-    model.ParseFromString(adapter.model_bytes)
-    source_base.ParseFromString(adapter.base_model_bytes)
-    prefix = validate_native_prefix(adapter.base_model_bytes, adapter.model_bytes)
-    base_size = prefix["native_entries_preserved"]
+    model, source_base, retained_base, prefix, expected_mapping = _retained_inventory(adapter, manifest)
+    base_size = len(source_base.pieces)
+    prefix_preserved = prefix["preserved"]
     source_normalizer_sha = _digest(source_base.normalizer_spec.SerializeToString())
     cleanup = _json(bundle / "cleanup.json")
     source_selection, selection_sha = _source_selection(manifest)
     selection, roles = _roles(source_selection, adapter, cleanup)
-    quality = _inventory_quality(adapter.model_bytes, set(range(base_size, len(model.pieces))))
-    inherited_quality = _inventory_quality(adapter.model_bytes, set(range(base_size)))
+    quality = _inventory_quality(adapter.model_bytes, set(range(len(model.pieces))) - retained_base)
+    inherited_quality = _inventory_quality(adapter.model_bytes, retained_base)
     original_quality = _inventory_quality(adapter.base_model_bytes)
     coverage = {lang: {"script": entry.get("script"), "required_characters": len(entry["characters"]),
                        "missing": [char for char in entry["characters"] if proc.unk_id() in proc.encode(char)]}
@@ -121,17 +194,16 @@ def validate_clean_tokenizer(
     probes = [{"input": text, "source": source_proc.normalize(text), "candidate": proc.normalize(text),
                "changed": source_proc.normalize(text) != proc.normalize(text)}
               for text in policy.get("normalizer_probes", [])]
-    expected_mapping = native_id_map(adapter.base_model_bytes, adapter.model_bytes)
     structural_gates = {"reproducible_clean_artifacts": True,
-                        "all_original_piece_messages_preserved": True,
-                        "all_original_model_metadata_preserved": True,
+                        "retained_source_piece_messages_preserved": True,
+                        "native_metadata_changes_limited_to_profile_declarations": True,
                         "original_normalizer_unchanged": manifest["normalizer_sha256"] == source_normalizer_sha
                         and not any(probe["changed"] for probe in probes),
                         "required_alphabets": not any(row["missing"] for row in coverage.values()),
-                        "public_layout": adapter.id_map == expected_mapping
-                        and adapter.id_map.hf_pad_id == base_size
-                        and adapter.id_map.hf_blank_id == base_size + 1}
-    report = {"algorithm": ALGORITHM, "tokenizer_version": 3, "phase": phase,
+                        "public_layout": adapter.id_map == expected_mapping}
+    if prefix_preserved:
+        structural_gates.update(all_original_piece_messages_preserved=True, all_original_model_metadata_preserved=True)
+    report = {"algorithm": manifest["algorithm"], "tokenizer_version": manifest["tokenizer_version"], "phase": phase,
               "profile": adapter.profile, "tokenizer_sha256": manifest["tokenizer_sha256"],
               "base_tokenizer_sha256": manifest["base_tokenizer_sha256"],
               "source_tokenizer_sha256": manifest["full_tokenizer_sha256"],
@@ -142,10 +214,10 @@ def validate_clean_tokenizer(
               "bundle_manifest_sha256": _sha(bundle / "manifest.json"),
               "sentencepiece_version": spm.__version__, "alphabet_coverage": coverage,
               "normalization_controls": probes, "inventory_quality": quality,
-              "inventory_quality_scope": "Only appended entries are release-gated; original Nemotron entries remain byte-identical.",
+              "inventory_quality_scope": "Only source additions are release-gated; retained original Nemotron piece messages remain byte-identical.",
               "inherited_inventory_quality": inherited_quality,
               "original_base_inventory_quality": original_quality,
-              "inherited_inventory_policy": "Report inherited normalization aliases and dominated pieces without changing original IDs, scores, types or normalization.",
+              "inherited_inventory_policy": "Report inherited normalization aliases and dominated pieces without changing retained scores, types or normalization; compact profiles explicitly remap IDs.",
               "native_prefix": prefix,
               "selection_quality": roles, "gates": structural_gates,
               "structural_passed": all(structural_gates.values()),
@@ -153,12 +225,13 @@ def validate_clean_tokenizer(
               "public_pad_id": adapter.id_map.hf_pad_id, "public_blank_id": adapter.id_map.hf_blank_id,
               "corpus_status": "incomplete", "corpus_gates": {}, "corpora": {},
               "missing_profiles": sorted(policy["profiles"]), "empty_profiles": [],
-              "old_ID_compatibility": True,
-              "old_ID_compatibility_scope": "Original Nemotron text IDs only; expanded v1/v2 additions and native RNNT blank require their explicit mappings.",
-              "original_text_id_range": [0, base_size - 1],
-              "original_public_pad_and_blank_preserved": True,
-              "requires_retokenized_training_labels": True,
-              "training_label_scope": "Original Nemotron text labels retain their meanings; regenerate labels from text to use the new segmentation. Older expanded bundle labels require migration or retokenization."}
+              "old_ID_compatibility": prefix_preserved,
+              "old_ID_compatibility_scope": "Original/full preserve the original Nemotron text IDs. Compact profiles remap retained rows; omitted rows cannot be reused. Acoustic blank follows the explicit map.",
+              "original_text_id_range": [0, base_size - 1] if prefix_preserved else None,
+              "original_native_entries_preserved": len(retained_base),
+              "original_public_pad_and_blank_preserved": prefix_preserved,
+              "requires_retokenized_training_labels": manifest["requires_retokenized_training_labels"],
+              "training_label_scope": "Original accepts original Nemotron labels unchanged. Other profiles require labels generated with the selected tokenizer; migration from a larger source may additionally omit labels."}
     manifest_path = files = None
     if corpus_manifest_path is not None:
         manifest_path = Path(corpus_manifest_path)
@@ -180,7 +253,7 @@ def validate_clean_tokenizer(
                 if receipt.get(field) != report[field]:
                     raise ValueError(f"Selection receipt does not bind current artifact: {field}")
             report["selection_receipt_sha256"] = _sha(receipt_path)
-            report["receipt_scope"] = "Binds current v3 artifact identity; does not independently prove creation chronology."
+            report["receipt_scope"] = "Binds the current profile artifact identity; does not independently prove creation chronology."
         for name in files:
             if not isinstance(name, str):
                 raise ValueError("Corpus paths must be strings")
@@ -215,8 +288,14 @@ def validate_clean_tokenizer(
         report.update({"corpus_threshold_checks": checks, "corpus_gates": gates,
                        "missing_profiles": missing, "empty_profiles": empty,
                        "corpus_status": "incomplete" if missing or empty else ("passed" if all(gates.values()) else "failed")})
-    usage = _training_usage(selection, proc, policy["profiles"], manifest_path, files,
-                            report.get("data_manifest_sha256"))
+    if not selection["additions"]:
+        usage = {"status": "passed", "optional_piece_count": 0, "required_piece_count": 0,
+                 "files": {}, "missing_profiles": [], "empty_profiles": [], "records": 0,
+                 "optional_unused": [], "required_unused": [], "additions": [],
+                 "reason": "This profile contains no source additions requiring fitted usage evidence"}
+    else:
+        usage = _training_usage(selection, proc, policy["profiles"], manifest_path, files,
+                                report.get("data_manifest_sha256"))
     for row in usage["additions"]:
         if row["required"] and row["training_occurrences"] and roles["required_piece_witnesses"][row["piece"]] is None:
             roles["required_piece_witnesses"][row["piece"]] = {
@@ -234,7 +313,7 @@ def validate_clean_tokenizer(
                    "selection_quality_gates": quality_gates, "selection_quality_status": quality_status,
                    "passed": passed, "status": "failed" if "failed" in statuses else ("passed" if passed else "incomplete"),
                    "checkpoint_validated": False, "asr_validated": False,
-                   "scope": "V3 text-tokenizer evidence with unchanged original Nemotron IDs, piece messages and normalization. Appended pieces can change segmentation; no acoustic accuracy or completed checkpoint validation claim.",
+                   "scope": "Text-tokenizer evidence with verified retained source piece messages and normalization. Profiles can change IDs, segmentation and output inventory; no acoustic accuracy or completed checkpoint validation claim.",
                    "corpus_unknown_policy": "Explicit per-phase policy thresholds govern unknowns and token efficiency; unconfigured metrics are reported only.",
                    "validator_sha256": _sha(Path(__file__)),
                    "shared_validator_sha256": _sha(Path(__file__).with_name("unigram_validation.py"))})
