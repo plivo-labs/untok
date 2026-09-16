@@ -41,6 +41,24 @@ print(tokenizer.ids_to_text(ids))
 Select `"original"`, `"latin"` or `"full"` the same way, or pass a bundle directory.
 The example returns native text IDs. Public IDs use a separate mapping.
 
+## Nemotron checkpoint
+
+In a compatible NeMo environment, migrate the original checkpoint with the
+selected bundle and text-donor initialization:
+
+```sh
+untok migrate \
+  --source nemotron-3.5-asr-streaming-0.6b.nemo \
+  --source-sha256 210214ed94039bf6bfbb9a047c7fa289628db75b103e2bf6381fa78285436a74 \
+  --bundle latin-indic \
+  --output nemotron-latin-indic.nemo
+```
+
+Existing weights are retained; new rows still need speech training. See
+[checkpoint migration](docs/native-checkpoint.md) for initialization,
+model settings and training YAML generation, and
+[indic-asr](https://github.com/plivo-labs/indic-asr) for the NVIDIA training recipe.
+
 ## Scope and limitations
 
 - The 22 Indic profiles are Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi,

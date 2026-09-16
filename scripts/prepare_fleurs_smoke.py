@@ -8,7 +8,6 @@ because only a prefix is fetched, the full archive hash is NOT verified.
 """
 from __future__ import annotations
 
-import argparse
 import csv
 import hashlib
 import io
@@ -16,7 +15,6 @@ import json
 from pathlib import Path
 import struct
 import tarfile
-import urllib.parse
 import urllib.request
 
 REVISION = "70bb2e84b976b7e960aa89f1c648e09c59f894dd"
@@ -94,7 +92,7 @@ def wav_info(data: bytes) -> dict:
             "duration": audio_size / block_align / sample_rate}
 
 
-def prepare_split(config, split, count, args, tokenizer, registry):
+def prepare_split(config, split, count, args, registry):
     language, name, script, locale = PROFILES[config]
     tsv_url = resolved(f"data/{config}/{split}.tsv")
     with get(tsv_url) as response:
@@ -162,12 +160,6 @@ def prepare_split(config, split, count, args, tokenizer, registry):
                     "source_archive_full_sha256_verified": False,
                     "license": "CC-BY-4.0", "speaker_id": None,
                     "purpose": "training_smoke" if split == "train" else "migration_development_check"}
-                if tokenizer is not None:
-                    encoded = tokenizer.encode(source["text"], add_special_tokens=False)
-                    unknown = tokenizer.token_to_id("<unk>")
-                    result["canonical_token_ids"] = encoded.ids
-                    result["new_canonical_token_ids"] = sorted({x for x in encoded.ids if x >= 13089})
-                    result["contains_unknown_token"] = unknown in encoded.ids
                 selected.append(result)
                 if len(selected) == count:
                     break
@@ -179,63 +171,3 @@ def prepare_split(config, split, count, args, tokenizer, registry):
         "full_archive_hash_verified": False, "skipped_before_selection_complete": skipped,
         "selection": "first archive members with nonempty source text and declared duration interval"}
     return selected, provenance
-
-
-def main():
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True)
-    parser.add_argument("--configs", nargs="+", choices=PROFILES, default=["en_us", "hi_in", "ta_in", "ml_in", "mr_in", "kn_in"])
-    parser.add_argument("--eval-per-language", type=int, default=2)
-    parser.add_argument("--train-per-language", type=int, default=1)
-    parser.add_argument("--min-duration", type=float, default=1.0)
-    parser.add_argument("--max-duration", type=float, default=8.0)
-    parser.add_argument("--max-download-mb-per-archive", type=int, default=64)
-    parser.add_argument("--tokenizer", type=Path)
-    parser.add_argument("--source-processor", type=Path, required=True)
-    args = parser.parse_args()
-    if args.eval_per_language < 0 or args.train_per_language < 0 or args.eval_per_language + args.train_per_language == 0:
-        parser.error("Request at least one clip and nonnegative counts")
-    args.output.mkdir(parents=True, exist_ok=True)
-    processor = json.loads(args.source_processor.read_text())
-    registry = processor.get("prompt_dictionary")
-    if registry is None:
-        raise ValueError("Source processor must contain its original prompt_dictionary")
-    tokenizer = None
-    if args.tokenizer:
-        from tokenizers import Tokenizer
-        tokenizer = Tokenizer.from_file(str(args.tokenizer))
-    clips, provenance = [], []
-    for config in args.configs:
-        for split, count in (("test", args.eval_per_language), ("train", args.train_per_language)):
-            if not count:
-                continue
-            selected, source = prepare_split(config, split, count, args, tokenizer, registry)
-            clips.extend(selected)
-            provenance.append(source)
-            print(json.dumps({"config": config, "split": split, "clips": len(selected),
-                              "downloaded_bytes": source["archive_prefix_bytes_downloaded"]}), flush=True)
-    for name, selected in (("all-clips.jsonl", clips),
-                           ("migration-clips.jsonl", [x for x in clips if x["source_split"] == "test" and x["paired_migration_prompt_available"]]),
-                           ("training-smoke-clips.jsonl", [x for x in clips if x["source_split"] == "train"])):
-        (args.output / name).write_text("".join(json.dumps(row, ensure_ascii=False) + "\n" for row in selected))
-    report = {"schema_version": 1, "dataset": DATASET, "source_revision": REVISION,
-        "license": "CC-BY-4.0", "source_card": f"https://huggingface.co/datasets/{DATASET}/blob/{REVISION}/README.md",
-        "development_only": True, "release_accuracy_corpus": False,
-        "purpose": "migration and RNNT engineering smoke tests; no held-out performance claim",
-        "selection_did_not_use_model_predictions": True,
-        "transcripts_modified": False,
-        "source_processor_sha256": sha(args.source_processor.read_bytes()),
-        "tokenizer_sha256": sha(args.tokenizer.read_bytes()) if args.tokenizer else None,
-        "min_duration": args.min_duration, "max_duration": args.max_duration,
-        "clips": len(clips), "total_duration_seconds": sum(row["duration"] for row in clips),
-        "profiles": args.configs, "sources": provenance,
-        "limitations": ["Short development clips only; no all-language accuracy claim",
-            "FLEURS does not publish speaker identity in these TSVs; do not invent per-speaker confidence intervals",
-            "Only archive prefixes downloaded; per-clip hashes verified locally, whole archive hashes not verified",
-            "Training smoke records are from train split; test records must not enter optimizer updates"]}
-    (args.output / "corpus-provenance.json").write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
-    print(json.dumps({"clips": len(clips), "seconds": report["total_duration_seconds"], "output": str(args.output.resolve())}))
-
-
-if __name__ == "__main__":
-    main()

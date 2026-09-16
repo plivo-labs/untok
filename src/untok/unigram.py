@@ -243,8 +243,11 @@ class NativeTokenizerAdapter:
     def get_vocab(self) -> dict[str, int]:
         return {self.backend.id_to_piece(i): i for i in range(self.vocab_size)}
 
-    def text_to_ids(self, text: str) -> list[int]:
-        return self.backend.encode(text, out_type=int)
+    def text_to_ids(self, text: str, sample_alpha: float | None = None) -> list[int]:
+        options = {} if sample_alpha is None else {
+            "enable_sampling": True, "alpha": sample_alpha, "nbest_size": -1,
+        }
+        return self.backend.encode(text, out_type=int, **options)
 
     def __call__(self, text: str) -> list[int]:
         return self.text_to_ids(text)
@@ -287,8 +290,10 @@ class NativeTokenizerAdapter:
             return "<blank>"
         return self.ids_to_tokens([index])[0]
 
-    def tokens_to_ids(self, tokens: Sequence[str]) -> list[int]:
-        return [self.token_to_id(t) for t in tokens]
+    def tokens_to_ids(self, tokens: str | Sequence[str], tokens_to_skip: Sequence[str] = ()) -> list[int]:
+        if isinstance(tokens, str):
+            tokens = [tokens]
+        return [self.token_to_id(token) for token in tokens if token not in tokens_to_skip]
 
     def tokens_to_text(self, tokens: Sequence[str]) -> str:
         return self.ids_to_text(self.tokens_to_ids(tokens))

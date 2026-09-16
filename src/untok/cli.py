@@ -1,4 +1,4 @@
-"""Native Unigram commands with an explicit namespace for the earlier BPE work."""
+"""Native SentencePiece Unigram tokenizer and checkpoint commands."""
 from __future__ import annotations
 
 import argparse
@@ -10,16 +10,10 @@ from .sources import write_json
 
 def main(argv=None):
     argv = list(sys.argv[1:] if argv is None else argv)
-    if argv and argv[0] == "legacy-bpe":
-        from .legacy_bpe_cli import main as legacy_main
-
-        return legacy_main(argv[1:])
-
     parser = argparse.ArgumentParser(
         prog="untok",
         description="Build and validate native SentencePiece Unigram tokenizer bundles for Nemotron.",
-        epilog=("Checkpoint migration requires a compatible NVIDIA NeMo runtime. Use 'untok legacy-bpe --help' "
-                "to reproduce the earlier BPE experiment with its original arguments and defaults."),
+        epilog="Checkpoint migration requires a compatible NVIDIA NeMo runtime.",
     )
     commands = parser.add_subparsers(dest="command", required=True)
     build = commands.add_parser(
@@ -53,6 +47,11 @@ def main(argv=None):
     migrate.add_argument("--source-sha256", required=True, help="Expected source checkpoint SHA256")
     migrate.add_argument("--output", required=True, help="New .nemo destination")
     migrate.add_argument("--seed", type=int, default=0)
+    migrate.add_argument("--max-new-mass-ratio", type=float, default=0.05,
+                         help="Initial text-donor added-output mass bound (default: 0.05)")
+    migrate.add_argument("--model-config", help="YAML native model settings applied before model construction")
+    migrate.add_argument("--training-template", help="Native NVIDIA training YAML used to write a .train.yaml sidecar")
+    migrate.add_argument("--training-overrides", help="YAML overrides for --training-template")
     validate = commands.add_parser(
         "validate", aliases=["validate-unigram"],
         help="Validate the full native candidate and pinned text corpora on CPU",
@@ -65,14 +64,6 @@ def main(argv=None):
     validate.add_argument("--selection-receipt", help="Required artifact receipt for reserve evaluation")
     validate.add_argument("--max-examples", type=int, default=0, help="Dev text examples only; reserve always omits text")
     validate.add_argument("--output", required=True)
-    evaluate = commands.add_parser("evaluate", help="Score supplied ASR predictions independently of tokenizer format")
-    evaluate.set_defaults(operation="evaluate")
-    evaluate.add_argument("--manifest", required=True)
-    evaluate.add_argument("--predictions", required=True)
-    evaluate.add_argument("--output", default="reports/speech.json")
-    evaluate.add_argument("--bootstrap-samples", type=int, default=2000)
-    evaluate.add_argument("--seed", type=int, default=0)
-    commands.add_parser("legacy-bpe", help="Reproduce earlier BPE commands with their original flags and defaults")
     args = parser.parse_args(argv)
     try:
         status = 0
@@ -99,7 +90,11 @@ def main(argv=None):
             from .native_checkpoint import migrate_native_checkpoint
 
             result = migrate_native_checkpoint(args.source, args.bundle, args.output,
-                                               expected_source_sha256=args.source_sha256, seed=args.seed)
+                                               expected_source_sha256=args.source_sha256, seed=args.seed,
+                                               max_new_mass_ratio=args.max_new_mass_ratio,
+                                               model_config=args.model_config,
+                                               training_template=args.training_template,
+                                               training_overrides=args.training_overrides)
         elif args.operation == "validate":
             from .unigram_validation import validate_native_tokenizer
 
@@ -114,14 +109,6 @@ def main(argv=None):
             for field in ("selection_quality_status", "selection_quality_passed"):
                 if field in report:
                     result[field] = report[field]
-        elif args.operation == "evaluate":
-            from .evaluation import evaluate_predictions, load_manifest, load_predictions, write_report
-
-            result = evaluate_predictions(load_manifest(args.manifest), load_predictions(args.predictions),
-                                          bootstrap_samples=args.bootstrap_samples, seed=args.seed)
-            write_report(result, args.output)
-            status = 0 if result["release_status"] == "passed" else 2
-            result = {"release_status": result["release_status"], "report": args.output}
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return status
     except (ValueError, OSError, RuntimeError, ImportError) as exc:

@@ -162,7 +162,7 @@ def offline(args, report):
 def inference(args, report):
     import torch
     from untok.checkpoint_validation import _configure_eager_decoding
-    from untok.evaluation import edit_distance, normalize_for_scoring
+    from untok.speech_metrics import edit_distance, normalize_for_scoring
     from untok.inference import _transcribe_with_verified_prompt
 
     model = load(args.checkpoint, args.device)
@@ -177,8 +177,8 @@ def inference(args, report):
             result, prompt = _transcribe_with_verified_prompt(model, Path(row["audio"]),
                                                               row["audio_sha256"], row["target_lang"])
             prediction = hypothesis(result)
-            reference = normalize_for_scoring(row["text"], {})
-            predicted = normalize_for_scoring(prediction["text"], {})
+            reference = normalize_for_scoring(row["text"])
+            predicted = normalize_for_scoring(prediction["text"])
             if not reference:
                 raise ValueError("Empty source reference")
             item = {"id": row["id"], "language": row["language"], "target_lang": row["target_lang"],

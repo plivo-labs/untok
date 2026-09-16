@@ -274,7 +274,7 @@ class ArtifactModel:
         return str(destination)
 
 
-def test_native_bundle_survives_renamed_archive_paths_and_source_directory_removal(native_bundle, tmp_path):
+def test_native_bundle_survives_renamed_archive_paths_and_source_directory_removal(native_bundle, tmp_path, native_sentencepiece):
     original = load_tokenizer_bundle(native_bundle)
     cfg = native_bundle_config(native_bundle)
     first = ArtifactModel(cfg, tmp_path / "first-archive")
@@ -293,10 +293,10 @@ def test_native_bundle_survives_renamed_archive_paths_and_source_directory_remov
     for text in ("", "  a  b ", "a\u200cb", "க", "aகb", "🙂a"):
         assert second.tokenizer.text_to_ids(text) == original.text_to_ids(text)
         assert second.tokenizer.ids_to_text(second.tokenizer.text_to_ids(text)) == original.ids_to_text(original.text_to_ids(text))
-    assert second.tokenizer.ids_to_text([2, 2, second.tokenizer.blank_id, 3]) == "aab"
+    assert second.tokenizer.ids_to_text([2, 2, 3]) == "aab"
 
 
-def test_v5_archive_reconstructs_physical_vocabulary_and_required_mask(tmp_path):
+def test_v5_archive_reconstructs_physical_vocabulary_and_required_mask(tmp_path, native_sentencepiece):
     torch = pytest.importorskip("torch")
     from test_native_checkpoint import toy_model
 
@@ -304,7 +304,8 @@ def test_v5_archive_reconstructs_physical_vocabulary_and_required_mask(tmp_path)
     cfg = native_bundle_config(bundle)
     first = ArtifactModel(cfg, tmp_path / "first-profile-archive")
     _setup_native_tokenizer(first, cfg)
-    assert len(first.tokenizer.get_vocab()) == 2653
+    assert len(first.tokenizer.get_active_vocab()) == 2653
+    assert len(first.tokenizer.get_vocab()) == 13087
     assert len(first.tokenizer.tokenizer.get_vocab()) == first.tokenizer.vocab_size == 13087
     assert set(first.tokenizer.tokenizer.get_vocab().values()) == set(range(13087))
     copied = copy.deepcopy(first.tokenizer)
@@ -387,11 +388,13 @@ def test_native_migration_requires_checkpoint_pin_before_nemo_or_output(native_b
 
 @pytest.mark.parametrize("corrupt_reload", [False, True])
 @pytest.mark.parametrize("profile", ["full", "latin-indic", "latin"])
+@pytest.mark.parametrize("configured", [False, True])
 def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reload(
-    monkeypatch, native_bundle, tmp_path, corrupt_reload, profile,
+    monkeypatch, native_bundle, tmp_path, corrupt_reload, profile, configured,
 ):
     """The archive is a unit-test stand-in; actual NeMo remains an integration gate."""
     torch = pytest.importorskip("torch")
+    OmegaConf = pytest.importorskip("omegaconf").OmegaConf
     import sentencepiece as spm
     import untok.native_checkpoint as migration
     from test_native_checkpoint import toy_model
@@ -400,35 +403,11 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
         package_tokenizer_bundles(native_bundle, tmp_path / "variants", profiles=[profile], make_zips=False)
         native_bundle = tmp_path / "variants" / profile
 
-    class Config(dict):
-        def __getattr__(self, name):
-            return self[name]
-
-        def __setattr__(self, name, value):
-            self[name] = convert(value)
-
-        def __setitem__(self, name, value):
-            super().__setitem__(name, convert(value))
-
-    def convert(value):
-        if isinstance(value, dict):
-            obj = Config()
-            for key, item in value.items():
-                dict.__setitem__(obj, key, convert(item))
-            return obj
-        if isinstance(value, list):
-            return [convert(item) for item in value]
-        return value
-
-    def plain(value):
-        if isinstance(value, dict): return {key: plain(item) for key, item in value.items()}
-        if isinstance(value, list): return [plain(item) for item in value]
-        return value
-
-    omega = ModuleType("omegaconf")
-    omega.OmegaConf = SimpleNamespace(create=convert, to_container=lambda cfg, resolve: plain(cfg))
-    omega.open_dict = lambda cfg: nullcontext()
-    monkeypatch.setitem(sys.modules, "omegaconf", omega)
+    convert = OmegaConf.create
+    plain = lambda cfg: OmegaConf.to_container(cfg, resolve=True)
+    # These are migration orchestration tests, not native tokenizer API tests.
+    # The native facade has its own tests against installed NVIDIA code.
+    monkeypatch.setattr("untok.nemo_tokenizer.create_nemo_tokenizer", lambda adapter, path: adapter)
 
     def copy_modules(model, size):
         toy = toy_model(size)
@@ -444,13 +423,17 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
                 ids_to_tokens=lambda ids: [backend.id_to_piece(i) for i in ids],
                 text_to_ids=lambda text: backend.encode(text, out_type=int))
             self.cfg = convert({"model_defaults": {"num_prompts": 64, "prompt_dictionary": {"auto": 0, "en-US": 1}},
-                                "tokenizer": {"type": "bpe"}, "train_ds": {"manifest": "private-source"}})
+                                "tokenizer": {"type": "bpe"}, "encoder": {"att_context_size": [56, 13]},
+                                "train_ds": {"manifest": "private-source"}})
             copy_modules(self, backend.get_piece_size())
 
     class NativeModel(torch.nn.Module):
         def __init__(self, cfg, trainer):
             super().__init__()
             self.cfg = cfg
+            if configured:
+                assert cfg.encoder.att_context_size == [[56, 0], [56, 1]]
+                assert cfg.freeze_updates.modules.encoder == -1
             self.registered = {}
             _setup_native_tokenizer(self, cfg.tokenizer)
             copy_modules(self, self.tokenizer.vocab_size)
@@ -475,8 +458,10 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
                 cfg.tokenizer.bundle_files[key] = str(artifact)
             restored = cls(cfg, trainer=None)
             restored.load_state_dict(payload["state"])
-            if corrupt_reload:
+            if corrupt_reload is True:
                 with torch.no_grad(): restored.encoder.weight[0, 0] += 1
+            elif corrupt_reload == "settings":
+                restored.cfg.freeze_updates.modules.encoder = 0
             return restored
 
     source_model = SourceModel()
@@ -492,10 +477,30 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
     source.write_bytes(b"pinned synthetic source for orchestration only")
     destination = tmp_path / "migrated.nemo"
     kwargs = {"expected_source_sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
+    if configured:
+        settings, template, overrides = (tmp_path / name for name in ("settings.yaml", "template.yaml", "overrides.yaml"))
+        settings.write_text("encoder:\n  att_context_size: [[56, 0], [56, 1]]\nfreeze_updates:\n  enabled: true\n  modules:\n    encoder: -1\n")
+        template.write_text("model:\n  train_ds:\n    manifest_filepath: null\n  optim:\n    name: adamw\n    lr: 0.001\ntrainer:\n  max_epochs: 1\n")
+        overrides.write_text("model:\n  train_ds:\n    manifest_filepath: train.jsonl\n")
+        kwargs.update(model_config=settings, training_template=template, training_overrides=overrides)
+    if corrupt_reload == "publication":
+        real_link = migration.os.link
+        def occupied_sidecar(temporary, output):
+            if output == destination.with_suffix(".train.yaml"):
+                output.write_text("another writer's artifact")
+            real_link(temporary, output)
+        monkeypatch.setattr(migration.os, "link", occupied_sidecar)
     if corrupt_reload:
-        with pytest.raises(ValueError, match="Retained learned state changed"):
+        error = FileExistsError if corrupt_reload == "publication" else ValueError
+        match = ("Native model settings changed" if corrupt_reload == "settings" else
+                 None if corrupt_reload == "publication" else "Retained learned state changed")
+        with pytest.raises(error, match=match):
             migration.migrate_native_checkpoint(source, native_bundle, destination, **kwargs)
         assert not destination.exists() and not destination.with_suffix(".migration.json").exists()
+        if corrupt_reload == "publication":
+            assert destination.with_suffix(".train.yaml").read_text() == "another writer's artifact"
+        else:
+            assert not destination.with_suffix(".train.yaml").exists()
     else:
         report = migration.migrate_native_checkpoint(source, native_bundle, destination, **kwargs)
         assert destination.exists() and destination.with_suffix(".migration.json").exists()
@@ -508,5 +513,60 @@ def test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reloa
         }[profile]
         assert len(report["prompt_registry"]["target_assignments"]) == 22
         assert report["new_row_initialization"]["verified_after_reload"]
+        assert report["initialization"] == "text-donor"
+        policy = report["new_row_initialization"]
+        if profile == "latin":
+            assert policy["policy"] == "no_added_rows"
+        else:
+            assert policy["policy"] == "retained_text_donor_mean_bound_v1"
+            assert policy["max_new_mass_ratio"] == .05
+        if configured:
+            sidecar = destination.with_suffix(".train.yaml")
+            trained = OmegaConf.load(sidecar)
+            assert trained.init_from_nemo_model == str(destination.resolve())
+            assert trained.model.train_ds.manifest_filepath == "train.jsonl"
+            assert trained.model.tokenizer.update_tokenizer is False
+            assert report["training_config"]["sha256"] == hashlib.sha256(sidecar.read_bytes()).hexdigest()
+            assert report["model_settings"]["effective"]["encoder"]["att_context_size"] == [[56, 0], [56, 1]]
+        else:
+            assert report["model_settings"] is None and report["training_config"] is None
         assert not report["asr_accuracy_evaluated"] and not report["training_forward_evaluated"]
         assert source_model.cfg.train_ds == {"manifest": "private-source"}
+
+
+@pytest.mark.parametrize("failure", ["settings", "publication"])
+def test_native_migration_rejects_changed_settings_and_rolls_back_only_own_files(
+    monkeypatch, native_bundle, tmp_path, failure,
+):
+    test_native_migration_orchestration_saves_verifies_and_rejects_corrupt_reload(
+        monkeypatch, native_bundle, tmp_path, failure, "full", True)
+
+
+def test_native_migration_options_and_sidecar_collision_fail_before_nemo_import(tmp_path):
+    source, output = tmp_path / "source.nemo", tmp_path / "output.nemo"
+    source.write_bytes(b"pinned source")
+    kwargs = {"expected_source_sha256": hashlib.sha256(source.read_bytes()).hexdigest()}
+    for initialization in ("blank", "text-donor", "random"):
+        with pytest.raises(TypeError, match="unexpected keyword argument 'initialization'"):
+            migrate_native_checkpoint(source, "latin-indic", output, initialization=initialization, **kwargs)
+    with pytest.raises(ValueError, match="require a training template"):
+        migrate_native_checkpoint(source, "latin-indic", output, training_overrides="extra.yaml", **kwargs)
+    output.with_suffix(".train.yaml").write_text("existing user data")
+    with pytest.raises(ValueError, match="new output paths"):
+        migrate_native_checkpoint(source, "latin-indic", output, training_template="native.yaml", **kwargs)
+    assert output.with_suffix(".train.yaml").read_text() == "existing user data"
+
+
+def test_native_migration_named_bundle_resolves_packaged_directory(monkeypatch, tmp_path):
+    from importlib import resources
+    source = tmp_path / "source.nemo"
+    source.write_bytes(b"pinned source")
+    observed = []
+    def loaded(directory):
+        observed.append(directory)
+        raise RuntimeError("stop before native model loading")
+    monkeypatch.setattr("untok.bundles.load_tokenizer_bundle", loaded)
+    with pytest.raises(RuntimeError, match="stop before"):
+        migrate_native_checkpoint(source, "latin-indic", tmp_path / "output.nemo",
+                                  expected_source_sha256=hashlib.sha256(source.read_bytes()).hexdigest())
+    assert observed == [Path(resources.files("untok").joinpath("data", "latin-indic")).resolve()]

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from untok.prompts import TARGET_LOCALES, build_prompt_registry, extend_prompt_registry
+from untok.prompts import TARGET_LOCALES, extend_prompt_registry
 
 
 @pytest.fixture
@@ -93,18 +93,6 @@ def test_exhaustion_and_ambiguous_locale_fail(processor, targets):
         extend_prompt_registry(processor, [{"language": "xyz"}])
     with pytest.raises(ValueError, match="duplicate target"):
         extend_prompt_registry(processor, targets + [targets[0]])
-
-
-def test_file_builder_writes_migration_ready_dictionary(processor, targets, tmp_path):
-    source, config, output = (tmp_path / p for p in ("processor.json", "build.json", "prompts.json"))
-    source.write_text(json.dumps(processor))
-    config.write_text(json.dumps({"targets": targets}))
-    report = build_prompt_registry(source, config, output)
-    assert json.loads(output.read_text()) == report
-    assert report["source_processor_sha256"] and report["build_config_sha256"]
-    assert all(type(index) is int for index in report["prompt_dictionary"].values())
-    with pytest.raises(FileExistsError):
-        build_prompt_registry(source, config, output)
 
 
 def test_pinned_nvidia_all_40_locales_unchanged_when_cache_present(targets):

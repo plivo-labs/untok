@@ -1,7 +1,7 @@
 """Hash-pinned native Unigram RNNT migration, including explicit vocabulary subsets."""
 from __future__ import annotations
 
-from dataclasses import asdict, replace
+from dataclasses import asdict
 import hashlib
 import json
 import operator
@@ -10,7 +10,8 @@ from pathlib import Path
 import tempfile
 from typing import Mapping, Sequence
 
-from .checkpoint import RNNTLayout, _sha256, _torch, initialize_added_rows, inspect_nemo_layout
+from .checkpoint import RNNTLayout, _sha256, _torch, inspect_nemo_layout
+from .native_donors import initialize_text_donor_rows
 from .native_runtime import get_native_nemo_model_class, native_bundle_config, verify_native_output_mask
 
 
@@ -66,26 +67,6 @@ def _validate_state_shapes(source, target, old_layout, new_layout):
                 raise ValueError(f"Invalid vocabulary tensor shape: {key}")
         elif old.shape != new.shape:
             raise ValueError(f"Unapproved non-vocabulary shape change: {key}")
-
-
-def initialize_native_added_rows(source, initialized_target, old_layout, new_layout, source_to_target,
-                                 *, max_new_mass_ratio=1e-6):
-    """Bound additions relative to retained logits, keeping blank as their anchor."""
-    torch = _torch()
-    old_ids, new_ids = retained_row_pairs(old_layout, new_layout, source_to_target)
-    _validate_state_shapes(source, initialized_target, old_layout, new_layout)
-    compact = dict(source)
-    for key in old_layout.row_keys:
-        compact[key] = source[key].index_select(0, torch.tensor(old_ids, device=source[key].device))
-    compact_layout = replace(old_layout, blank_id=old_ids.index(old_layout.blank_id), output_size=len(old_ids))
-    initialized, policy = initialize_added_rows(compact, initialized_target, compact_layout, new_layout,
-                                                 new_ids, max_new_mass_ratio=max_new_mass_ratio)
-    policy.update(source_output_rows_including_blank=old_layout.output_size,
-                  retained_source_model_rows=list(old_ids), removed_source_model_rows=[i for i, v in enumerate(source_to_target) if v is None],
-                  reference_source_blank_row=old_layout.blank_id,
-                  probability_comparison="new outputs versus retained source outputs, including blank",
-                  preservation_limit="Removing or masking source outputs changes the softmax denominator and can change recognition")
-    return initialized, policy
 
 
 def transfer_native_state_dict(source, initialized_target, old_layout, new_layout, source_to_target):
@@ -277,7 +258,8 @@ def _prompt_registry(model_defaults, supplied=None, *, profile=None):
 
 
 def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256, seed=0,
-                              prompt_registry=None, max_new_mass_ratio=1e-6):
+                              prompt_registry=None, max_new_mass_ratio=0.05,
+                              model_config=None, training_template=None, training_overrides=None):
     """Migrate a pinned .nemo into a full, reduced, or clean native bundle.
 
     Versioned profiles accept the original NVIDIA base or its exact full Untok v1
@@ -285,9 +267,14 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
     acoustic network and every retained row remain byte-equal, while changed
     labels, softmaxes and speech accuracy still require separate checks.
     """
-    from .bundles import load_tokenizer_bundle
+    from importlib import resources
+    from .bundles import PROFILES, load_tokenizer_bundle
 
+    if training_overrides is not None and training_template is None:
+        raise ValueError("Training overrides require a training template")
     torch = _torch()
+    if isinstance(bundle, str) and bundle in PROFILES:
+        bundle = resources.files("untok").joinpath("data", bundle)
     source, bundle, output = Path(source), Path(bundle).resolve(), Path(output)
     if not source.is_file() or source.suffix != ".nemo":
         raise ValueError("Provide a complete local source .nemo checkpoint")
@@ -296,7 +283,9 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
             or _sha256(source) != expected_source_sha256):
         raise ValueError("Source checkpoint SHA256 differs from its explicit pin")
     report_path = output.with_suffix(".migration.json")
-    if output.suffix != ".nemo" or output.exists() or output.resolve() == source.resolve() or report_path.exists():
+    training_path = output.with_suffix(".train.yaml") if training_template is not None else None
+    if (output.suffix != ".nemo" or output.exists() or output.resolve() == source.resolve()
+            or report_path.exists() or training_path is not None and training_path.exists()):
         raise ValueError("Checkpoint and migration report require new output paths")
     adapter = load_tokenizer_bundle(bundle)
     tokenizer_cfg = native_bundle_config(bundle)
@@ -336,23 +325,34 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                                       "prompt_registry": registry}
         for split in ("train_ds", "validation_ds", "test_ds"):
             cfg[split] = None
+    settings = None
+    if model_config is not None:
+        from .nemo_config import apply_model_config
+        cfg, settings = apply_model_config(cfg, model_config)
+
+    def verify_settings(model):
+        if settings is not None:
+            actual = OmegaConf.to_container(OmegaConf.create({"model": model.cfg}), resolve=True)["model"]
+            if any(actual.get(key) != value for key, value in settings["effective"].items()):
+                raise ValueError("Native model settings changed during construction or checkpoint reload")
+
     output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix=".untok-native-migration-", dir=output.parent) as staging:
         with torch.random.fork_rng(devices=[]):
             torch.manual_seed(seed)
             expanded = native_class(cfg=cfg, trainer=None)
+        verify_settings(expanded)
         new_layout = inspect_nemo_layout(expanded)
         retained_row_pairs(old_layout, new_layout, source_to_target)
         if expanded.tokenizer.model_bytes != adapter.model_bytes or new_layout.blank_id != adapter.blank_id:
             raise ValueError("Constructed model disagrees with the target native tokenizer")
         verify_native_output_mask(expanded)
-        initialized, initialization = initialize_native_added_rows(
-            original.state_dict(), expanded.state_dict(), old_layout, new_layout, source_to_target,
-            max_new_mass_ratio=max_new_mass_ratio)
-        added = initialization["new_model_rows"]
-        expected_added = {key: initialized[key][added].detach().clone() for key in new_layout.row_keys}
-        transferred = transfer_native_state_dict(original.state_dict(), initialized, old_layout, new_layout, source_to_target)
-        del initialized
+        transferred = transfer_native_state_dict(
+            original.state_dict(), expanded.state_dict(), old_layout, new_layout, source_to_target)
+        transferred, policy = initialize_text_donor_rows(
+            transferred, new_layout, adapter, source_to_target, max_new_mass_ratio=max_new_mass_ratio)
+        added = policy["new_model_rows"]
+        expected_added = {key: transferred[key][added].detach().clone() for key in new_layout.row_keys}
         expanded.load_state_dict(transferred, strict=True)
         del transferred
         expanded.eval()
@@ -360,11 +360,12 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         output_mask_before = verify_native_output_mask(expanded)
         if any(not torch.equal(expanded.state_dict()[key][added], value) for key, value in expected_added.items()):
             raise ValueError("Added native row initialization changed during transfer")
-        initialization["verified_before_save"] = True
+        policy["verified_before_save"] = True
         staged = Path(staging) / output.name
         expanded.save_to(str(staged))
         del expanded
         restored = native_class.restore_from(str(staged), map_location="cpu")
+        verify_settings(restored)
         if inspect_nemo_layout(restored) != new_layout:
             raise ValueError("Native acoustic layout changed after checkpoint reload")
         output_mask_after = verify_native_output_mask(restored)
@@ -389,9 +390,18 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
             raise ValueError("Source tokenizer inventory or label policy changed after checkpoint reload")
         if any(not torch.equal(restored.state_dict()[key][added], value) for key, value in expected_added.items()):
             raise ValueError("Added native rows changed after checkpoint reload")
-        initialization["verified_after_reload"] = True
+        policy["verified_after_reload"] = True
         if _sha256(source) != expected_source_sha256 or native_bundle_config(bundle) != tokenizer_cfg:
             raise ValueError("Pinned migration inputs changed during execution")
+        if settings is not None and _sha256(settings["source"]) != settings["sha256"]:
+            raise ValueError("Model settings changed during migration")
+        training = None
+        if training_path is not None:
+            from .nemo_config import native_training_config
+            training_cfg = native_training_config(restored.cfg, output.resolve(), training_template, training_overrides)
+            staged_training = Path(staging) / training_path.name
+            OmegaConf.save(training_cfg, staged_training)
+            training = {"path": str(training_path.resolve()), "sha256": _sha256(staged_training)}
         report = {"schema_version": 1, "status": "native_migrated_weights_verified",
                   "source_checkpoint_sha256": expected_source_sha256, "checkpoint_sha256": _sha256(staged),
                   "source_inventory": source_inventory,
@@ -405,7 +415,8 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                   "requires_retokenized_training_labels": requires_retokenized_labels,
                   "source_tokenizer_check": source_tokenizer_check,
                   "before_save": before, "after_reload": after,
-                  "new_row_initialization": initialization, "prompt_registry": registry,
+                  "initialization": "text-donor", "new_row_initialization": policy, "prompt_registry": registry,
+                  "model_settings": settings, "training_config": training,
                   "inactive_output_mask_before_save": output_mask_before,
                   "inactive_output_mask_after_reload": output_mask_after,
                   "native_tokenizer_verified_before_save_and_after_reload": True,
@@ -419,12 +430,18 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                                         else ["new_language_fine_tuning_and_evaluation"])}
         staged_report = Path(staging) / report_path.name
         staged_report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
-        os.link(staged, output)
+        publications = [(staged, output), (staged_report, report_path)]
+        if training_path is not None:
+            publications.append((staged_training, training_path))
+        published = []
         try:
-            os.link(staged_report, report_path)
+            for temporary, destination in publications:
+                os.link(temporary, destination)
+                published.append((temporary, destination))
         except OSError:
-            # Remove only our just-created hard link if report publication fails.
-            if os.path.samestat(output.stat(), staged.stat()):
-                output.unlink()
+            # Remove only links created by this call; never overwrite another artifact.
+            for temporary, destination in reversed(published):
+                if destination.exists() and os.path.samestat(destination.stat(), temporary.stat()):
+                    destination.unlink()
             raise
     return report

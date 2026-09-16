@@ -8,19 +8,6 @@ import re
 import tempfile
 
 
-class _AcousticVocabularyView:
-    """NeMo setup needs every physical row; public vocabulary stays active-only."""
-
-    def __init__(self, adapter):
-        self._adapter = adapter
-
-    def get_vocab(self):
-        return self._adapter.get_acoustic_vocab()
-
-    def __getattr__(self, name):
-        return getattr(object.__getattribute__(self, "_adapter"), name)
-
-
 def native_bundle_config(directory):
     """Validate a bundle before registering its complete file set with NeMo."""
     from .bundles import load_tokenizer_bundle
@@ -42,6 +29,7 @@ def native_bundle_config(directory):
 
 def _setup_native_tokenizer(model, tokenizer_cfg):
     from .bundles import load_tokenizer_bundle
+    from .nemo_tokenizer import create_nemo_tokenizer
 
     if tokenizer_cfg.get("type") != "untok_native_unigram":
         raise ValueError("NativeNemotronRNNTModel requires a native Unigram bundle")
@@ -72,13 +60,12 @@ def _setup_native_tokenizer(model, tokenizer_cfg):
         manifest = json.loads((directory / "manifest.json").read_text())
         if set(registered) != {"manifest.json", *manifest["files"]}:
             raise ValueError("Registered native artifact set differs from its bundle manifest")
+        tokenizer = create_nemo_tokenizer(tokenizer, directory / "tokenizer.model")
     model.tokenizer_cfg = tokenizer_cfg
     model.tokenizer_dir = str(Path(registered["manifest.json"]).parent)
     # NeMo calls its SentencePiece category "bpe", including Unigram models.
     # The actual encoder and decoder here both use the pinned Unigram proto.
     model.tokenizer_type = "bpe"
-    if callable(getattr(tokenizer, "get_acoustic_vocab", None)):
-        tokenizer.tokenizer = _AcousticVocabularyView(tokenizer)
     model.tokenizer = tokenizer
     model.native_bundle_manifest_sha256 = digest
     model.native_tokenizer_sha256 = hashlib.sha256(tokenizer.model_bytes).hexdigest()
@@ -248,6 +235,7 @@ def get_native_nemo_model_class():
 
             def _setup_tokenizer(self, tokenizer_cfg):
                 _setup_native_tokenizer(self, tokenizer_cfg)
+                self._derive_tokenizer_properties()
 
         NativeNemotronRNNTModel.__module__ = __name__
         NativeNemotronRNNTModel.__qualname__ = "NativeNemotronRNNTModel"

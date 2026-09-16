@@ -6,9 +6,10 @@ retain the component-specific terms below. The package's combined license
 expression records these separate obligations; it does not relicense every
 component under Apache-2.0.
 
-BPE input pins are in `configs/sources.lock.json` and `configs/corpora.lock.json`.
-Native input pins are recorded in its generated selection, frozen corpus
-manifest and study reports. Build manifests record consumed hashes. This
+Native input pins are recorded in `configs/native-study-sources.lock.json`,
+the generated selection, frozen corpus manifest and study reports.
+`configs/sources.lock.json` preserves the input pins referenced by the
+historical fitting configuration. Build manifests record consumed hashes. This
 project does not assert NVIDIA, AI4Bharat or Meta endorsement.
 
 | Input | Source and published license information |
@@ -60,11 +61,10 @@ models are unchanged; the metadata has its own updated integrity hash.
 No acoustic checkpoint weights or third-party corpus text are included here.
 The historical selected 190-character Latin inventory remains in the source
 study metadata but is not imported as added vocabulary in the current profiles.
-No universal Unicode fallback is provided. The IndicConformer donor normalizers are not imported into
-the final tokenizer. The BPE variant retains the published JSON normalizer;
-the native Unigram variant retains the embedded SentencePiece normalizer.
+No universal Unicode fallback is provided. Donor normalizers are not imported
+into the final tokenizer; it retains the embedded Nemotron SentencePiece normalizer.
 
-See [native corpus preparation](docs/native-unigram-data.md) for sampling,
+See [native corpus preparation](https://github.com/plivo-labs/untok/blob/main/docs/native-unigram-data.md) for sampling,
 split checks, source-specific annotation cleanup and exclusions. Corpus text
 is not included in tokenizer bundles. Vaani was downloaded for inspection
 but excluded from native fitting because its lexical extraction policy is

@@ -123,7 +123,7 @@ def reuse_clips(paths, config, split, count, args):
 def prepare_fleurs(config, split, count, args, registry):
     old=reuse_clips(args.reuse_jsonl,config,split,count,args)
     if old:return old,{'config':config,'split':split,'selected':len(old),'reused_verified_clips':True}
-    return fleurs.prepare_split(config,split,count,args,None,registry)
+    return fleurs.prepare_split(config,split,count,args,registry)
 
 
 def prepare_iv(lang, split, count, args, target, token, excluded_speakers):

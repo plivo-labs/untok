@@ -29,7 +29,7 @@ LATIN_SOURCE_LANGUAGES = frozenset(
 
 
 def choose_rows(records, profile, languages=None, max_per_language=1):
-    from untok.evaluation import ADAPTATION_LOCALES, BASE_ASR_LOCALES
+    from untok.speech_metrics import ADAPTATION_LOCALES, BASE_ASR_LOCALES
     from untok.prompts import TARGET_LOCALES
 
     if profile not in {"original", "latin", "latin-indic", "full"}:

@@ -31,7 +31,7 @@ using the new Indic segmentation.
 
 Migration accepts the pinned original `.nemo` checkpoint from
 `nvidia/nemotron-3.5-asr-streaming-0.6b`, revision
-`1c8deaecc64b91f034d73e08dd8b64625eb3395d`, with SHA256
+`ea30d66debe3740a08b573244286791d423d6b3e`, with SHA256
 `210214ed94039bf6bfbb9a047c7fa289628db75b103e2bf6381fa78285436a74`.
 Its embedded tokenizer is Unigram despite NeMo's `BPE` class naming.
 
@@ -40,6 +40,31 @@ checkpoint hash and embedded tokenizer are verified. Full-v1 additions use their
 explicit source-to-target maps; the original-Nemotron identity guarantee does
 not promise stable IDs for every historical Untok addition. A historical reduced
 checkpoint is not a supported source.
+
+## NeMo tokenizer interface
+
+Acoustic restoration uses NVIDIA's `SentencePieceTokenizer` over the exact
+verified bundle bytes. Native string/list token lookup, skipped tokens, unknown
+lookup, sampling, processor encode/decode and `text_to_ids_var_bpe` methods are
+inherited from NeMo. The latter method name does not change Unigram to BPE.
+NeMo is imported only for acoustic model use, not text tokenization.
+
+On `model.tokenizer`, `vocab` and `get_vocab()` contain every physical text slot
+at its native ID. `get_active_vocab()` exposes the active subset. The standalone
+bundle adapter's `get_vocab()` remains active-only. Reserved outputs still require
+the joint mask described above.
+
+The NeMo facade keeps SentencePiece's `pad_id=-1`; `blank_id` remains the separate
+RNNT blank shown in the table. The prediction embedding's padding row is the RNNT
+blank. Native decoding removes acoustic blanks before passing text IDs to the
+tokenizer. The standalone adapter additionally accepts and removes blank IDs
+when decoding.
+
+The interface has differential tokenizer and artifact tests. Current native
+migration, training, resume and speech checks are recorded in
+[indic-asr verification](https://github.com/plivo-labs/indic-asr/blob/main/docs/verification.md).
+Successful integration does not establish speech accuracy, contextual boosting
+or distributed training. The versioned reports below are historical evidence.
 
 ## Evidence by version
 
@@ -58,8 +83,10 @@ Four [optional RNNT integration tests](../tests/test_native_runtime.py) also pas
 in the pinned NeMo environment on CPU: standard and fused joint/loss paths with
 the PyTorch and numba loss backends produced finite forward/backward results and
 zero gradients for inactive output rows. These small joint/loss tests do not
-establish complete acoustic-model training. GPU execution, CUDA graph replay,
-paired speech-output parity and speech accuracy have not been validated for v5.
+establish complete acoustic-model training. That historical report did not
+validate GPU execution, CUDA graph replay, paired speech-output parity or speech
+accuracy. The later [bounded Runpod checks](https://github.com/plivo-labs/indic-asr/blob/main/docs/verification.md)
+cover the current integration and explicitly state their limits.
 
 The [v4 migration report](../configs/native-checkpoint-v4-results.json) records
 successful construction and save/reload of compact v4 subsets, which omitted
@@ -70,14 +97,8 @@ from the current structural and tensor-preservation checks.
 
 ## Migrate
 
-After installing `untok` in your NeMo environment, select the installed bundle's
-directory. Migration takes a directory path; the short names accepted by
-`load_tokenizer()` are for text tokenization.
-
-```sh
-BUNDLE=$(python -c 'from importlib.resources import files; print(files("untok").joinpath("data", "latin-indic"))')
-untok check --bundle "$BUNDLE"
-```
+After installing `untok` in your NeMo environment, choose `original`, `latin`,
+`latin-indic` or `full`. Migration also accepts a local bundle directory.
 
 Migration requires the compatible NVIDIA NeMo Speech runtime. The historical
 v1 integration environment used Python 3.12, PyTorch 2.8.0 with CUDA 12.8, SentencePiece 0.2.1
@@ -88,11 +109,11 @@ The `checkpoint` extra supplies tensor utilities, not the complete NeMo stack.
 untok migrate \
   --source nemotron-3.5-asr-streaming-0.6b.nemo \
   --source-sha256 210214ed94039bf6bfbb9a047c7fa289628db75b103e2bf6381fa78285436a74 \
-  --bundle "$BUNDLE" \
+  --bundle latin-indic \
   --output nemotron-latin-indic.nemo
 ```
 
-Choose `full` or `latin` in the path command to migrate those bundles.
+Choose `full` or `latin` in `--bundle` to migrate those bundles.
 `original` can use the pinned original checkpoint directly. The destination
 and migration report must not exist. The source checkpoint is never overwritten.
 
@@ -109,6 +130,60 @@ SHA-256 to the same command. Its tokenizer must match
 `f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8`.
 Surviving trained v1 additions then retain their rows; only target pieces absent
 from that source require initialization.
+
+## New-token initialization
+
+Migration initializes every added row from existing text pieces:
+
+1. Find the highest-scoring exact sequence of active original NORMAL pieces
+   spelling each addition, using original Unigram scores and deterministic ID
+   tie-breaking. Average their embedding, output-weight and bias rows.
+2. If no exact sequence exists, average all active original NORMAL text rows.
+   Blank, special and inactive pieces are not text donors.
+3. Shift new output biases to bound their combined initial mass relative to
+   active retained text outputs, with a default ratio of 0.05.
+   `--max-new-mass-ratio` adjusts this initial bound.
+
+For the original-Nemotron to v5 Latin + Indic migration, 1,462 additions have exact
+paths and 5,811 use the mean of 3,098 text donors. The default bias offset is
+**-8.064528728662534**. It is applied only to new rows at initialization, not to
+blank or as a decoding penalty. Original rows, including relocated blank and
+inactive rows, remain unchanged. Profiles without additions need no donor offset.
+
+The mass bound describes initialization in exact arithmetic, with floating-point
+qualifications. It is not a speech-accuracy or convergence guarantee. Averaged
+embeddings do not reproduce the recurrent state of their donor sequence. The
+historical migration reports above do not qualify this new policy's training.
+
+## Model settings and training configuration
+
+Migration can apply a YAML file of model settings before constructing the adapted
+checkpoint and generate a native training configuration beside it:
+
+```sh
+untok migrate \
+  --source nemotron-3.5-asr-streaming-0.6b.nemo \
+  --source-sha256 210214ed94039bf6bfbb9a047c7fa289628db75b103e2bf6381fa78285436a74 \
+  --bundle latin-indic \
+  --model-config configs/model-settings.yaml \
+  --training-template vendor/nemo/examples/asr/conf/fastconformer/cache_aware_streaming/fastconformer_transducer_bpe_streaming_prompt.yaml \
+  --training-overrides configs/untok-latin-indic.yaml \
+  --output models/untok-initial.nemo
+```
+
+The configuration paths above are supplied by the `indic-asr` recipe. Model
+settings use direct keys such as `encoder.att_context_size` and `freeze_updates`,
+not an outer `model` block. The training template supplies NVIDIA's data and
+Trainer settings; the generated YAML uses the actual checkpoint architecture and
+prompt registry plus the selected overrides. Tokenizer replacement remains
+disabled because migration has already installed the chosen vocabulary.
+
+Outputs are `untok-initial.nemo`, `untok-initial.migration.json` and, when a training
+template is supplied, `untok-initial.train.yaml`. The migration report records
+verification; this command does not train a model. Use native NeMo for training,
+with the installed Untok model class registered before restoration.
+
+## Restore for inference
 
 Restore a migrated checkpoint with the installed `untok` package:
 
@@ -186,10 +261,8 @@ Original row values can be preserved while masking or adding output classes
 changes probabilities and predictions. Token-ID identity is not a claim of
 unrestricted speech-output parity.
 
-New output weights initially copy the original blank row with a lower bias.
-The combined new-output mass is bounded relative to retained old outputs by
-`1e-6`, before training. New predictor rows start from the mean retained text
-embedding. These rows remain independent and trainable.
+New rows use the text-donor initialization described above. Original row values
+remain unchanged, and additions are independent, trainable parameters.
 
 The original prompt slots stay fixed. Missing target identities receive unused
 slots in the existing prompt dimension. This enables the conditioning path;
@@ -211,10 +284,9 @@ symbol marks a word boundary.
 
 That expanded text tokenizer can select `▁भारत` immediately. When migrating from
 the original NVIDIA checkpoint, that new output row has no learned acoustic
-association with the word yet. Under
-the current initialization, new rows have the blank row's weights and a lower
-bias, so ordinary greedy decoding will not select them without subsequent
-weight changes or an additional scoring intervention. Changing the language
+association with the word yet. Text-donor initialization supplies starting
+weights, but training must still teach the new token's acoustic and prediction
+history. Changing the language
 prompt does not close that score gap. Simply boosting a new row's score would
 not teach it the word's acoustic meaning.
 
@@ -267,8 +339,10 @@ run does not establish paired audio behavior for v5.
 
 Fine-tuning is a separate task, outside compatibility validation.
 
-Use the Full migration for the initial continuation-training experiment, with
-new-language speech and replay from original languages. Keep speaker-disjoint
+Use the profile matching your intended output languages. The
+[indic-asr recipe](https://github.com/plivo-labs/indic-asr) uses Latin + Indic;
+Full retains every original output. Train with new-language speech and replay
+from retained original languages. Keep speaker-disjoint
 development and test audio, preserve complete transcript labels, and record
 the training hours and source mix per language. Tune learning rate, sampling
 and stopping only on development audio.

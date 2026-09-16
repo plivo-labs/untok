@@ -10,10 +10,11 @@ from sentencepiece import sentencepiece_model_pb2 as pb
 
 from untok.checkpoint import inspect_nemo_layout
 from untok.native_checkpoint import (
-    _prompt_registry, compare_retained_logits, initialize_native_added_rows,
+    _prompt_registry, compare_retained_logits,
     retained_row_pairs, select_source_native_inventory, transfer_native_state_dict, validate_source_native_tokenizer,
     verify_native_state_transfer,
 )
+from untok.native_donors import initialize_text_donor_rows
 
 
 def toy_model(vocabulary_size):
@@ -43,6 +44,17 @@ def toy_model(vocabulary_size):
     return model
 
 
+def toy_adapter(mapping, vocabulary_size):
+    base, target = pb.ModelProto(), pb.ModelProto()
+    for spelling in "abcd":
+        base.pieces.add(piece=spelling, score=-1, type=pb.ModelProto.SentencePiece.NORMAL)
+    for index in range(vocabulary_size):
+        spelling = base.pieces[mapping.index(index)].piece if index in mapping else "acd"
+        target.pieces.add(piece=spelling, score=-1, type=pb.ModelProto.SentencePiece.NORMAL)
+    return SimpleNamespace(base_model_bytes=base.SerializeToString(), model_bytes=target.SerializeToString(),
+                           source_native_to_target_native=mapping, inactive_native_ids=())
+
+
 @pytest.mark.parametrize("size,mapping,removed", [
     (6, (0, 1, 2, 3, 6), 0),
     (5, (0, None, 1, 2, 5), 1),
@@ -54,8 +66,7 @@ def test_full_and_subset_transfer_preserve_precisely_retained_rows(size, mapping
     source, target = toy_model(4), toy_model(size)
     old_layout, new_layout = inspect_nemo_layout(source), inspect_nemo_layout(target)
     original = copy.deepcopy(source.state_dict())
-    initial, policy = initialize_native_added_rows(original, target.state_dict(), old_layout, new_layout, mapping)
-    target.load_state_dict(transfer_native_state_dict(original, initial, old_layout, new_layout, mapping))
+    target.load_state_dict(transfer_native_state_dict(original, target.state_dict(), old_layout, new_layout, mapping))
     report = verify_native_state_transfer(original, target.state_dict(), old_layout, new_layout, mapping)
     assert report["passed"] and report["removed_source_text_rows"] == removed
     assert report["all_source_values_preserved"] == (removed == 0)
@@ -67,8 +78,6 @@ def test_full_and_subset_transfer_preserve_precisely_retained_rows(size, mapping
     omitted = sum(original[k][[i for i, value in enumerate(mapping) if value is None]].numel() for k in old_layout.row_keys)
     assert report["learned_values_omitted"] == omitted
     assert report["learned_values_preserved"] + omitted == sum(v.numel() for v in original.values())
-    if size == 2:
-        assert policy["policy"] == "no_added_rows" and policy["new_row_count"] == 0
 
 
 @pytest.mark.parametrize("mapping,size", [((0, 1, 2, 3, 6), 6), ((0, None, 1, 2, 5), 5)])
@@ -77,8 +86,9 @@ def test_retained_prediction_prefixes_logits_and_new_rows_are_trainable(mapping,
     torch.manual_seed(33)
     source, target = toy_model(4), toy_model(size)
     old_layout, new_layout = inspect_nemo_layout(source), inspect_nemo_layout(target)
-    initial, policy = initialize_native_added_rows(source.state_dict(), target.state_dict(), old_layout, new_layout, mapping)
-    target.load_state_dict(transfer_native_state_dict(source.state_dict(), initial, old_layout, new_layout, mapping))
+    transferred = transfer_native_state_dict(source.state_dict(), target.state_dict(), old_layout, new_layout, mapping)
+    initial, policy = initialize_text_donor_rows(transferred, new_layout, toy_adapter(mapping, size), mapping)
+    target.load_state_dict(initial)
     old_prefix = torch.tensor([[4, 0, 2, 2, 3]])
     new_prefix = torch.tensor([[mapping[i] for i in old_prefix[0].tolist()]])
     audio = torch.randn(1, 5, 4)
@@ -92,9 +102,8 @@ def test_retained_prediction_prefixes_logits_and_new_rows_are_trainable(mapping,
     old_ids, new_ids = retained_row_pairs(old_layout, new_layout, mapping)
     added = policy["new_model_rows"]
     ratio = right[..., added].double().logsumexp(-1) - right[..., list(new_ids)].double().logsumexp(-1)
-    assert float(ratio.detach().exp().max()) <= 1.00001e-6
-    text_rows = [i for i in old_ids if i != old_layout.blank_id]
-    expected = source.state_dict()[old_layout.embedding_key][text_rows].double().mean(0).float()
+    assert float(ratio.detach().exp().max()) <= .05 + 1e-7
+    expected = source.state_dict()[old_layout.embedding_key][[0, 2, 3]].double().mean(0).float()
     assert torch.equal(target.state_dict()[new_layout.embedding_key][added[0]], expected)
     new_labels = torch.tensor([[added[0], added[1], added[0], added[1], added[0]]])
     loss = torch.nn.functional.cross_entropy(forward(target, new_labels).flatten(0, 1), new_labels.flatten())
@@ -106,15 +115,14 @@ def test_retained_prediction_prefixes_logits_and_new_rows_are_trainable(mapping,
 
 def test_removed_output_can_change_predictions_despite_exact_retained_logits():
     torch = pytest.importorskip("torch")
-    source, target = toy_model(4), toy_model(3)
+    source, target = toy_model(4), toy_model(2)
     old, new = inspect_nemo_layout(source), inspect_nemo_layout(target)
-    mapping = (0, None, 1, None, 3)
+    mapping = (0, None, 1, None, 2)
     with torch.no_grad():
         source.joint.joint_net[-1].weight.zero_()
         source.joint.joint_net[-1].bias.zero_()
         source.joint.joint_net[-1].bias[1] = 100
-    initial, _ = initialize_native_added_rows(source.state_dict(), target.state_dict(), old, new, mapping)
-    target.load_state_dict(transfer_native_state_dict(source.state_dict(), initial, old, new, mapping))
+    target.load_state_dict(transfer_native_state_dict(source.state_dict(), target.state_dict(), old, new, mapping))
     features = torch.ones(1, 4)
     before, after = source.joint.joint_net[-1](features), target.joint.joint_net[-1](features)
     assert before.argmax(-1).item() == 1 and mapping[1] is None
@@ -314,7 +322,8 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
         source.joint.joint_net[-1].weight[removed] = 20_000
         source.joint.joint_net[-1].bias[removed] = 30_000
     original = copy.deepcopy(source.state_dict())
-    initial, policy = initialize_native_added_rows(original, target.state_dict(), old, new, mapping)
+    transferred = transfer_native_state_dict(original, target.state_dict(), old, new, mapping)
+    initial, policy = initialize_text_donor_rows(transferred, new, adapter, mapping)
     additions = policy["new_model_rows"]
     assert set(additions) == set(range(new.output_size)) - {mapping[index] for index in retained}
     # ID 13087 was the original blank but denotes '#' in the v1 extension:
@@ -324,16 +333,18 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
         assert adapter.token_to_id("#") != new.blank_id
     if profile in {"original", "latin"} or not is_base:
         assert not additions and policy["policy"] == "no_added_rows"
-    expected_mean = original[old.embedding_key][retained[:-1]].double().mean(0).float()
-    assert torch.equal(initial[new.embedding_key][additions], expected_mean.expand(len(additions), -1))
-    assert torch.equal(
-        initial[new.output_weight_key][additions],
-        original[old.output_weight_key][old.blank_id].expand(len(additions), -1),
-    )
-    assert torch.all(initial[new.output_bias_key][additions] < original[old.output_bias_key][old.blank_id])
+    if additions:
+        assert policy["policy"] == "retained_text_donor_mean_bound_v1"
+        assert policy["max_new_mass_ratio"] == .05
+        assert torch.all(initial[new.embedding_key][additions] > 0)
+        for key in new.row_keys:
+            assert torch.isfinite(initial[key][additions]).all()
+            assert initial[key][additions].abs().max() < 1000
+        assert not torch.equal(initial[new.output_weight_key][additions],
+                               original[old.output_weight_key][old.blank_id].expand(len(additions), -1))
     expected_new = {key: initial[key][additions].clone() for key in new.row_keys}
 
-    target.load_state_dict(transfer_native_state_dict(original, initial, old, new, mapping))
+    target.load_state_dict(initial)
     from untok.native_runtime import install_native_output_mask
 
     target.tokenizer = adapter
@@ -344,7 +355,6 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
     assert report["removed_source_text_rows"] == len(removed)
     assert report["learned_values_omitted"] == sum(original[key][removed].numel() for key in old.row_keys)
     assert report["all_source_values_preserved"] == (not removed)
-    assert policy["removed_source_model_rows"] == removed
     for key in old.row_keys:
         assert torch.equal(migrated[key][[mapping[index] for index in retained]], original[key][retained])
         assert torch.equal(migrated[key][new.blank_id], original[key][old.blank_id])
@@ -364,8 +374,13 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
         predicted, _ = model.decoder.prediction["rnn"](model.decoder.prediction["embed"](prefix))
         return model.joint.joint_net(model.encoder(features) + predicted)
 
-    assert compare_retained_logits(forward(source, old_prefix), forward(target, new_prefix), old, new, mapping,
+    logits = forward(target, new_prefix)
+    assert compare_retained_logits(forward(source, old_prefix), logits, old, new, mapping,
                                    inactive_target_ids=adapter.inactive_native_ids)["passed"]
+    if additions:
+        active_targets = [mapping[index] for index in active_retained] + [new.blank_id]
+        ratio = logits[..., additions].double().logsumexp(-1) - logits[..., active_targets].double().logsumexp(-1)
+        assert float(ratio.detach().exp().max()) <= .05 + 1e-7
 
     # A tensor state round trip checks these rows survive serialization. This is
     # deliberately not a NeMo .nemo restoration or an acoustic-quality test.

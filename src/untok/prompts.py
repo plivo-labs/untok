@@ -162,22 +162,3 @@ def extend_prompt_registry(
             "unused_prompt_slots": [i for i in range(size) if i not in set(dictionary.values())],
             "output_language_tags_added": False,
             "validation_boundary": "Prompt configuration only; speech training, output tags and ASR evaluation remain separate."}
-
-
-def build_prompt_registry(
-    processor_config: str | Path, build_config: str | Path, output: str | Path,
-    *, previous_registry: str | Path | None = None,
-) -> dict[str, Any]:
-    """Build a manifest; migration consumes manifest['prompt_dictionary']."""
-    config, config_hash = _read(build_config)
-    if not isinstance(config.get("targets"), list):
-        raise ValueError("Build config must contain a targets list")
-    report = extend_prompt_registry(processor_config, config["targets"],
-                                    aliases=config.get("prompt_aliases"), previous_registry=previous_registry)
-    report["build_config_sha256"] = config_hash
-    output = Path(output)
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with output.open("x") as stream:
-        json.dump(report, stream, ensure_ascii=False, indent=2)
-        stream.write("\n")
-    return report

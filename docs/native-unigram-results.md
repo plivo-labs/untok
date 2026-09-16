@@ -8,7 +8,7 @@ v5 bundles. See [current profile contracts](native-preservation.md) and
 Build date: 7 September 2026. The candidate contains **20,550 native text IDs**
 and **20,552 public IDs**, including public padding and blank. It extends the
 actual SentencePiece Unigram tokenizer embedded in the pinned Nemotron 3.5 ASR
-streaming 0.6B checkpoint. It does not replace the separate BPE artifact.
+streaming 0.6B checkpoint. The published bundle uses this native Unigram format.
 
 This is a validated tokenizer candidate. Native checkpoint migration and
 bounded speech compatibility checks are documented in

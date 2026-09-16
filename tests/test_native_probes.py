@@ -108,7 +108,7 @@ def test_subset_scope_selection_and_missing_audio_failures(probes):
 
 
 def test_subset_preserves_all_retained_source_regional_prompt_paths(probes):
-    from untok.evaluation import ADAPTATION_LOCALES, BASE_ASR_LOCALES
+    from untok.speech_metrics import ADAPTATION_LOCALES, BASE_ASR_LOCALES
     from untok.prompts import TARGET_LOCALES
 
     _, subset = probes

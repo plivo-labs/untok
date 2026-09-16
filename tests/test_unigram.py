@@ -63,6 +63,16 @@ def test_native_encoder_public_mapping_and_unknown_fallback(inputs):
     assert not manifest["checkpoint_validated"]
 
 
+def test_public_string_piece_and_skip_semantics(inputs):
+    base, selection, output = inputs
+    build_native_tokenizer(base, selection, output)
+    adapter = NativeTokenizerAdapter(output)
+    assert adapter.tokens_to_ids("ab") == [4]
+    assert adapter.tokens_to_ids(["ab", "<tag>", "a"], tokens_to_skip=["<tag>"]) == [4, 2]
+    assert adapter.tokens_to_ids("ab", tokens_to_skip=["ab"]) == []
+    assert adapter.ids_to_text(adapter.text_to_ids("a b ab", sample_alpha=0.1)) == "a b ab"
+
+
 @pytest.mark.parametrize("mutation", ["score", "type", "normalizer", "trainer", "denormalizer"])
 def test_rejects_native_behavior_changes(inputs, mutation):
     base, selection, output = inputs

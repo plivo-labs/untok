@@ -130,7 +130,6 @@ extension, not a globally trained Unigram distribution.
 selection needs a separately versioned profile recipe and evaluation.
 `untok build` packages the original append-only format from a base and selection;
 `build-unigram`, `check-unigram` and `validate-unigram` remain aliases.
-Historical BPE commands use the `legacy-bpe` prefix.
 
 The [v5 save/reload results](../configs/native-checkpoint-v5-results.json) verify
 all four real CPU migrations, exact preservation of every original tensor value,
@@ -139,6 +138,7 @@ and inactive-output masks before save and after reload. The
 measurements of compact subsets.
 
 Text pieces do not teach acoustic meanings. [Checkpoint migration](native-checkpoint.md),
-speech fine-tuning and held-out WER/CER evaluation are separate steps; v5 GPU
-execution and speech accuracy remain unvalidated. Historical
+speech fine-tuning and held-out WER/CER evaluation are separate steps.
+[Bounded native Runpod checks](https://github.com/plivo-labs/indic-asr/blob/main/docs/verification.md)
+cover integration, not broad speech accuracy. Historical
 v1/v3/v4 checkpoint or audio results apply only to their recorded artifact hashes.
