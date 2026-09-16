@@ -17,17 +17,18 @@ Or install with Python 3.11 or later: `python -m pip install .`.
 
 All four bundles are included.
 
-| Bundle | Text entries | Contents |
-| --- | ---: | --- |
-| `original` | 13,087 | Exact original Nemotron SentencePiece tokenizer; no added or removed pieces |
-| `latin` | 2,653 | Latin pieces, shared punctuation and relevant existing language tags |
-| `latin-indic` | 10,372 | Latin plus all 22 target Indic profiles, shared punctuation and relevant existing tags |
-| `full` | 20,360 | Complete original Nemotron vocabulary plus the selected Indic vocabulary |
+| Bundle | Text entries | RNNT blank ID | Contents |
+| --- | ---: | ---: | --- |
+| `original` | 13,087 | 13,087 | Exact, unmodified Nemotron base |
+| `latin` | 2,653 | 2,653 | Original Nemotron Latin/shared pieces and relevant existing tags; no additions |
+| `latin-indic` | 10,372 | 10,372 | 3,099 original Latin/Indic/shared pieces + 7,273 Indic/shared additions for the 22 target profiles |
+| `full` | 20,360 | 20,360 | All 13,087 original pieces + the same 7,273 Indic/shared additions |
 
 `original` is byte-identical to the original 13,087-piece model. `full` preserves
 all original text IDs, scores and types. The two script subsets use compact IDs
 and explicit checkpoint row maps; their IDs differ from the original model.
-All four use the original Nemotron normalizer.
+All four use the original Nemotron normalizer. The RNNT blank is always the
+final acoustic output row, separate from text tokens and public IDs.
 
 ## Use
 
@@ -56,9 +57,8 @@ retained-weight checks and save/reload; speech accuracy remains unevaluated.
   language or recognition accuracy. Language prompt slots are separate from
   tokenizer language-tag pieces.
 - Use a [matching checkpoint](docs/native-checkpoint.md). Subsets require row
-  remapping, and expanded vocabularies move the acoustic blank to the last row.
-  New pieces require speech training. Earlier release results do not qualify
-  changed profiles automatically.
+  remapping; migration preserves retained weights, including blank. Only the
+  Indic/shared additions introduce new token rows that need speech training.
 - The unchanged normalizer converts ZWNJ to a space and leaves legacy Malayalam
   chillu variants distinct. Decoding returns normalized text.
 - Coverage is finite; unknown characters can produce `<unk>`. See the
