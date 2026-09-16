@@ -1,9 +1,7 @@
 # untok
 
-A SentencePiece Unigram tokenizer for speech-to-text (ASR) and TTS models, based
-on NVIDIA Nemotron's native vocabulary and extended with Indic language support.
-All bundles preserve every original Nemotron text-token ID, piece, score,
-type and normalizer setting. New pieces are appended after the original bank.
+A SentencePiece Unigram tokenizer for ASR and TTS, extending NVIDIA Nemotron's
+native vocabulary with Indic language support.
 
 ## Install
 
@@ -14,8 +12,7 @@ git clone https://github.com/plivo-labs/untok.git
 cd untok
 ```
 
-Install with [uv](https://docs.astral.sh/uv/getting-started/installation/).
-It manages the Python environment for you:
+Install with [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```sh
 uv sync --locked
@@ -31,7 +28,7 @@ python -m pip install .
 
 ## Choose a bundle
 
-All three bundles are included. Choose one when loading the tokenizer.
+All three bundles are included.
 
 | Bundle | Text IDs | Includes |
 | --- | ---: | --- |
@@ -39,15 +36,9 @@ All three bundles are included. Choose one when loading the tokenizer.
 | `latin-indic` | 20,784 | Original Nemotron bank plus Latin and Indic additions |
 | `full` | 20,784 | Original Nemotron bank plus all admitted additions |
 
-**All 13,087 original text IDs (`0..13086`) are unchanged in every bundle.**
-Profiles restrict added pieces only. The original multilingual bank is never
-filtered, so the current `full` and `latin-indic` model bytes are identical.
-The RNNT acoustic blank moves to the new final output row during checkpoint
-migration; it is separate from SentencePiece text IDs. Retained weights are
-copied, including the learned blank row. See [ID preservation](docs/native-preservation.md).
-All three v3 checkpoints passed real NeMo save/reload with exact preservation of
-every original learned value; [migration results](configs/native-checkpoint-v3-results.json)
-record the hashes and scope. Speech accuracy is a separate evaluation.
+**All 13,087 original Nemotron text IDs (`0..13086`) are unchanged**, along with
+their pieces, scores, types and normalizer. Profiles filter additions only;
+`full` and `latin-indic` currently have identical vocabularies.
 
 ## Use the tokenizer
 
@@ -68,40 +59,34 @@ a custom bundle. The example uses native text IDs.
 
 ## Languages
 
-These lists describe the minimum intended evaluation scope. All bundles also
-retain the complete original multilingual vocabulary. Regional variants count
-once. The [language coverage report](docs/language-coverage.md) records corpus
-checks, remaining unknown characters and limits; Norwegian has a Bokmål text
-sample, with Nynorsk untested.
+Text coverage is evaluated across these 56 language profiles. All bundles retain
+the original multilingual vocabulary; see the [coverage report](docs/language-coverage.md)
+for measured gaps.
 
-**`latin`: 24 languages.** Croatian, Czech, Danish, Dutch, English, Estonian,
+**Latin (24):** Croatian, Czech, Danish, Dutch, English, Estonian,
 Finnish, French, German, Hungarian, Italian, Latvian, Lithuanian, Maltese,
-Norwegian, Polish, Portuguese, Romanian, Slovak, Slovenian, Spanish, Swedish,
+Norwegian (Bokmål), Polish, Portuguese, Romanian, Slovak, Slovenian, Spanish, Swedish,
 Turkish and Vietnamese.
 
-**`latin-indic`: 47 languages.** All 24 Latin languages above, Arabic, and 22 Indic languages below:
+**Indic (22):**
 Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi, Kannada, Kashmiri (Arabic script),
 Konkani, Maithili, Malayalam, Manipuri (Meetei Mayek), Marathi, Nepali, Odia,
 Punjabi (Gurmukhi), Sanskrit, Santali (Ol Chiki), Sindhi (Devanagari),
 Tamil, Telugu and Urdu.
-Arabic is retained because its script is shared with Kashmiri and Urdu.
-Devanagari is shared across its languages; Bengali and Assamese share a vocabulary bank.
 
-**`full`: 56 languages.** All 47 languages above, plus Bulgarian, Greek, Hebrew,
+**Other (10):** Arabic, Bulgarian, Greek, Hebrew,
 Japanese, Korean, Mandarin Chinese, Russian, Thai and Ukrainian.
 
 ## Limitations
 
-- Text coverage does not mean a model can recognize or generate speech in those
-  languages.
-- Existing checkpoints need vocabulary expansion and blank-row migration. Original
-  text labels retain their meanings; regenerate labels to use new segmentation.
-  New pieces need speech training. V3 has no completed
-  acoustic validation; see [checkpoint usage](docs/native-checkpoint.md).
+- Existing Nemotron checkpoints need [migration](docs/native-checkpoint.md),
+  which preserves original weights and moves the acoustic blank to the final row.
+  All three migrations passed save/reload verification; speech accuracy remains untested.
+- New pieces can change segmentation and require speech training.
 - The original normalizer is unchanged: ZWNJ becomes a space and legacy Malayalam
   chillu spellings remain distinct. Decoding returns native-normalized text.
 - The vocabulary is finite. Uncovered characters or emoji can produce `<unk>`;
-  alternate scripts and every dialect are not validated.
+  alternate scripts and dialects are not fully validated.
 - Selecting a bundle selects a vocabulary, not an inference language lock.
 
 See the [native tokenizer guide](docs/native-unigram.md),
