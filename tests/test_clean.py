@@ -241,7 +241,8 @@ def test_shipped_profiles_match_the_reproducible_recipe(clean_bundles):
     for profile in PROFILES:
         manifest = json.loads((DATA / profile / "manifest.json").read_text())
         assert manifest["algorithm"] == ALGORITHM
-        assert _files(output / profile) == _files(DATA / profile)
+        assert {name: raw for name, raw in _files(output / profile).items()
+                if name != "THIRD_PARTY.md"} == _files(DATA / profile)
 
 
 def test_zip_resources_keep_native_ids_and_normalization_after_extraction(tmp_path, monkeypatch):

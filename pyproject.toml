@@ -7,7 +7,9 @@ name = "untok"
 version = "0.3.0"
 description = "SentencePiece Unigram tokenizers with Latin and Indic language support"
 readme = "README.md"
-license-files = ["THIRD_PARTY.md", "licenses/*.txt"]
+# The distribution includes code and tokenizer assets under separate terms.
+license = "Apache-2.0 AND LicenseRef-OpenMDW-1.1 AND MIT AND Unicode-3.0"
+license-files = ["LICENSE", "NOTICE", "THIRD_PARTY.md", "licenses/*.txt"]
 requires-python = ">=3.11"
 dependencies = ["sentencepiece==0.2.1", "protobuf>=4.25,<7"]
 
@@ -24,7 +26,7 @@ where = ["src"]
 namespaces = false
 
 [tool.setuptools.package-data]
-untok = ["data/*/*.json", "data/*/*.model"]
+untok = ["data/*/*.json", "data/*/*.model", "notices/*.md", "notices/licenses/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

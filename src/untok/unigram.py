@@ -175,6 +175,9 @@ def build_native_tokenizer(base_path: str | Path, selection_path: str | Path, ou
         "selection_sha256": _digest(selection_bytes), "files": files,
     }
     write_json(destination / "manifest.json", manifest)
+    from .export_notices import write_export_notices
+
+    write_export_notices(destination)
     return manifest
 
 

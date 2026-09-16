@@ -15,6 +15,7 @@ from sentencepiece import sentencepiece_model_pb2 as pb
 
 from ._bundle_script_ranges import INDIC_SCRIPTS, RANGES, SOURCES, TABLE_SHA256, UNICODE_VERSION
 from .runtime import IdMap
+from .export_notices import source_notice_files, with_export_notices
 from .unigram import NativeTokenizerAdapter, _digest, _load, _vocabulary, validate_native_prefix
 
 
@@ -289,14 +290,15 @@ def deterministic_bundle_zip(directory: str | Path, archive: str | Path) -> str:
     paths = sorted(directory.rglob("*"))
     if any(path.is_symlink() for path in paths):
         raise ValueError("Bundle archives cannot include symlinks")
+    files = with_export_notices({path.relative_to(directory).as_posix(): path.read_bytes()
+                                 for path in paths if path.is_file()})
     archive.parent.mkdir(parents=True, exist_ok=True)
     with zipfile.ZipFile(archive, "x", compression=zipfile.ZIP_STORED) as out:
-        for path in paths:
-            if path.is_file():
-                info = zipfile.ZipInfo(path.relative_to(directory).as_posix(), date_time=(1980, 1, 1, 0, 0, 0))
-                info.create_system = 3
-                info.external_attr = 0o100644 << 16
-                out.writestr(info, path.read_bytes())
+        for name, content in sorted(files.items()):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.create_system = 3
+            info.external_attr = 0o100644 << 16
+            out.writestr(info, content)
     return _digest(archive.read_bytes())
 
 
@@ -325,6 +327,7 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
     if any((bundle / name).is_symlink() for name in names):
         raise ValueError("Source bundle files must not be symlinks")
     source_files = {name: (bundle / name).read_bytes() for name in names}
+    notices = source_notice_files(bundle)
     base_bytes, full_bytes = source_files["base-tokenizer.model"], source_files["tokenizer.model"]
     prepared = {}
     for profile in profiles:
@@ -352,10 +355,13 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
         stage.mkdir()
         for profile in sorted(profiles):
             files, manifest = prepared[profile]
+            files = with_export_notices({**files, **notices})
             directory = stage / profile
             directory.mkdir()
             for name, data in files.items():
-                (directory / name).write_bytes(data)
+                path = directory / name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_bytes(data)
             adapter = load_tokenizer_bundle(directory)
             item = {"directory": profile, "native_vocabulary_size": adapter.vocab_size,
                     "native_blank_id": adapter.blank_id, "acoustic_output_size": adapter.blank_id + 1,

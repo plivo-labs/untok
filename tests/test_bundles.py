@@ -108,12 +108,16 @@ def test_dense_row_maps_blank_and_public_padding(full, tmp_path):
 
 
 def test_full_files_and_archives_are_reproducible(full, tmp_path):
-    before = {p.name: p.read_bytes() for p in full.iterdir()}
+    def files(directory):
+        return {p.relative_to(directory).as_posix(): p.read_bytes()
+                for p in directory.rglob("*") if p.is_file()}
+
+    before = files(full)
     first, second = tmp_path / "one", tmp_path / "two"
     result = package_tokenizer_bundles(full, first)
     package_tokenizer_bundles(full, second, profiles=("full", "latin-indic", "latin"))
-    assert before == {p.name: p.read_bytes() for p in full.iterdir()}
-    assert before == {p.name: p.read_bytes() for p in (first / "full").iterdir()}
+    assert before == files(full)
+    assert before == files(first / "full")
     for name in ("latin.zip", "latin-indic.zip", "full.zip", "bundles.json"):
         assert (first / name).read_bytes() == (second / name).read_bytes()
     for profile, item in result["bundles"].items():

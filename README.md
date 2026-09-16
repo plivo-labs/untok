@@ -92,3 +92,5 @@ Japanese, Korean, Mandarin Chinese, Russian, Thai and Ukrainian.
 See the [native tokenizer guide](docs/native-unigram.md),
 [reproduction workflow](docs/native-reproduction.md), and
 [source provenance](THIRD_PARTY.md) for implementation and source details.
+
+Project code: [Apache-2.0](LICENSE). Tokenizer assets retain their [upstream terms](THIRD_PARTY.md).

@@ -169,6 +169,7 @@ def _artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
 def build_clean_bundles(bundle: str | Path, output: str | Path):
     """Create three append-only profiles preserving the complete original bank."""
     from .bundles import load_tokenizer_bundle, PROFILES
+    from .export_notices import source_notice_files, write_export_notices
 
     source = load_tokenizer_bundle(bundle)
     if not isinstance(source, NativeTokenizerAdapter) or not hasattr(source, "base_model_bytes"):
@@ -177,6 +178,7 @@ def build_clean_bundles(bundle: str | Path, output: str | Path):
     # rebuild any profile without chaining lossy vocabulary transformations.
     full_bytes = getattr(source, "full_model_bytes", source.model_bytes)
     validate_native_prefix(source.base_model_bytes, full_bytes)
+    notices = source_notice_files(bundle) if isinstance(bundle, Path) or bundle not in PROFILES else {}
     output = Path(output)
     if output.exists() and any(output.iterdir()):
         raise ValueError("Use a new or empty destination")
@@ -188,6 +190,7 @@ def build_clean_bundles(bundle: str | Path, output: str | Path):
         for name, raw in files.items():
             (destination / name).write_bytes(raw)
         (destination / "manifest.json").write_bytes(_json(manifest))
+        write_export_notices(destination, notices)
         result[profile] = manifest
     return result
 
