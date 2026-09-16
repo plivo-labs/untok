@@ -11,7 +11,7 @@ import tempfile
 from typing import Mapping, Sequence
 
 from .checkpoint import RNNTLayout, _sha256, _torch, initialize_added_rows, inspect_nemo_layout
-from .native_runtime import get_native_nemo_model_class, native_bundle_config
+from .native_runtime import get_native_nemo_model_class, native_bundle_config, verify_native_output_mask
 
 
 def retained_row_pairs(old_layout: RNNTLayout, new_layout: RNNTLayout,
@@ -84,7 +84,7 @@ def initialize_native_added_rows(source, initialized_target, old_layout, new_lay
                   retained_source_model_rows=list(old_ids), removed_source_model_rows=[i for i, v in enumerate(source_to_target) if v is None],
                   reference_source_blank_row=old_layout.blank_id,
                   probability_comparison="new outputs versus retained source outputs, including blank",
-                  preservation_limit="Removing source outputs changes the softmax denominator and can change recognition")
+                  preservation_limit="Removing or masking source outputs changes the softmax denominator and can change recognition")
     return initialized, policy
 
 
@@ -132,9 +132,15 @@ def verify_native_state_transfer(source, migrated, old_layout, new_layout, sourc
 
 
 def compare_retained_logits(source_logits, target_logits, old_layout, new_layout, source_to_target,
-                            *, atol=1e-6, rtol=1e-5):
+                            *, atol=1e-6, rtol=1e-5, inactive_target_ids=()):
     torch = _torch()
     old_ids, new_ids = retained_row_pairs(old_layout, new_layout, source_to_target)
+    inactive = set(inactive_target_ids)
+    if (len(inactive) != len(inactive_target_ids)
+            or any(type(index) is not int or not 0 <= index < new_layout.blank_id for index in inactive)):
+        raise ValueError("Inactive logit IDs must be unique target text rows")
+    pairs = [(old, new) for old, new in zip(old_ids, new_ids) if new not in inactive]
+    old_ids, new_ids = tuple(old for old, _ in pairs), tuple(new for _, new in pairs)
     if source_logits.shape[-1] != old_layout.output_size or target_logits.shape[-1] != new_layout.output_size:
         raise ValueError("Logit widths disagree with their native layouts")
     left = source_logits.index_select(-1, torch.tensor(old_ids, device=source_logits.device))
@@ -146,7 +152,8 @@ def compare_retained_logits(source_logits, target_logits, old_layout, new_layout
     if not torch.allclose(left, right, atol=atol, rtol=rtol):
         raise ValueError(f"Retained native logits changed (maximum absolute error {error})")
     return {"passed": True, "max_absolute_error": error, "atol": atol, "rtol": rtol,
-            "scope": "retained raw logits for supplied identical features and mapped retained prefixes"}
+            "inactive_target_outputs_excluded": sorted(inactive),
+            "scope": "active retained raw logits for supplied identical features and mapped retained prefixes"}
 
 
 def _source_native_bytes(model):
@@ -315,7 +322,7 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         raise ValueError("Source acoustic vocabulary disagrees with the selected pinned tokenizer inventory")
     cfg = OmegaConf.create(OmegaConf.to_container(original.cfg, resolve=True))
     registry = _prompt_registry(cfg.model_defaults, prompt_registry,
-                                profile=adapter.profile if bundle_manifest.get("tokenizer_version") == 4 else None)
+                                profile=adapter.profile if bundle_manifest.get("tokenizer_version", 0) >= 4 else None)
     with open_dict(cfg):
         cfg.tokenizer = tokenizer_cfg
         cfg.target = "untok.native_runtime.NativeNemotronRNNTModel"
@@ -338,6 +345,7 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         retained_row_pairs(old_layout, new_layout, source_to_target)
         if expanded.tokenizer.model_bytes != adapter.model_bytes or new_layout.blank_id != adapter.blank_id:
             raise ValueError("Constructed model disagrees with the target native tokenizer")
+        verify_native_output_mask(expanded)
         initialized, initialization = initialize_native_added_rows(
             original.state_dict(), expanded.state_dict(), old_layout, new_layout, source_to_target,
             max_new_mass_ratio=max_new_mass_ratio)
@@ -349,6 +357,7 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         del transferred
         expanded.eval()
         before = verify_native_state_transfer(original.state_dict(), expanded.state_dict(), old_layout, new_layout, source_to_target)
+        output_mask_before = verify_native_output_mask(expanded)
         if any(not torch.equal(expanded.state_dict()[key][added], value) for key, value in expected_added.items()):
             raise ValueError("Added native row initialization changed during transfer")
         initialization["verified_before_save"] = True
@@ -358,6 +367,9 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
         restored = native_class.restore_from(str(staged), map_location="cpu")
         if inspect_nemo_layout(restored) != new_layout:
             raise ValueError("Native acoustic layout changed after checkpoint reload")
+        output_mask_after = verify_native_output_mask(restored)
+        if output_mask_after != output_mask_before:
+            raise ValueError("Native inactive-output mask changed after checkpoint reload")
         after = verify_native_state_transfer(original.state_dict(), restored.state_dict(), old_layout, new_layout, source_to_target)
         if (restored.tokenizer.model_bytes != adapter.model_bytes
                 or restored.tokenizer.base_model_bytes != adapter.base_model_bytes
@@ -394,13 +406,15 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                   "source_tokenizer_check": source_tokenizer_check,
                   "before_save": before, "after_reload": after,
                   "new_row_initialization": initialization, "prompt_registry": registry,
+                  "inactive_output_mask_before_save": output_mask_before,
+                  "inactive_output_mask_after_reload": output_mask_after,
                   "native_tokenizer_verified_before_save_and_after_reload": True,
                   "asr_accuracy_evaluated": False, "training_forward_evaluated": False,
                   "logit_parity_evaluated": False,
                   "remaining_gates": (["retokenize_training_labels"] if requires_retokenized_labels else [])
                                      + ["training_forward_backward", "retained_logit_and_audio_controls",
                                         "unmasked_audio_regression"]
-                                     + ([] if bundle_manifest.get("tokenizer_version") == 4
+                                     + ([] if bundle_manifest.get("tokenizer_version", 0) >= 4
                                         and adapter.profile in {"original", "latin"}
                                         else ["new_language_fine_tuning_and_evaluation"])}
         staged_report = Path(staging) / report_path.name

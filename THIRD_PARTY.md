@@ -37,8 +37,11 @@ upstream license and attribution texts:
 The `original` profile contains a byte-identical copy of NVIDIA's embedded
 13,087-entry SentencePiece tokenizer, accompanied by Untok's wrapper metadata.
 The `full` profile preserves that original prefix and adds the selected Indic
-vocabulary. The `latin` and `latin-indic` profiles are derived script subsets
-with compact IDs and explicit source row maps. All retain the original
+vocabulary. The `latin` and `latin-indic` profiles are derived script subsets that keep
+included Nemotron pieces at their original IDs. Excluded spellings are replaced
+by inactive reserved slots, with mandatory masking in the acoustic runtime.
+All original checkpoint rows are retained, including inactive rows; model sizes
+do not shrink with the active vocabulary. All profiles retain the original
 SentencePiece normalizer. The source code's Apache license does not replace
 the terms for these model/data materials.
 

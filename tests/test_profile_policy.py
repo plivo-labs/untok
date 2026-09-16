@@ -42,6 +42,27 @@ def test_exact_native_locale_inventory_and_types_are_accounted_for():
         assert {p.piece[1:-1] for p in tags if piece_allowed(p, profile)} == allowed_token_locales(profile)
 
 
+def test_original_profile_selection_identifies_active_ids_without_compacting_them():
+    original = pb.ModelProto.FromString((DATA / "base-tokenizer.model").read_bytes())
+    active = {profile: {index for index, row in enumerate(original.pieces) if piece_allowed(row, profile)}
+              for profile in ("original", "latin", "latin-indic", "full")}
+    assert active["original"] == active["full"] == set(range(13087))
+    assert len(active["latin"]) == 2653
+    assert len(active["latin-indic"]) == 3099
+    assert active["latin"] < active["latin-indic"]
+    assert {0, 2, 38, 46, 13086} <= active["latin"]
+    assert {1, 45, 3247, 3251, 3260}.isdisjoint(active["latin"])
+    assert {3247, 3251, 3260} <= active["latin-indic"]
+    assert {1, 45}.isdisjoint(active["latin-indic"])
+    devanagari = {index for index, row in enumerate(original.pieces)
+                  if any("\u0900" <= character <= "\u097f" for character in row.piece)}
+    assert len(devanagari) == 196
+    assert devanagari <= active["latin-indic"]
+    # Sparse active IDs require retaining physical slots through the last
+    # original Latin piece; counting active entries cannot define native IDs.
+    assert max(active["latin"]) == max(active["latin-indic"]) == 13086
+
+
 def test_script_policy_filters_mixed_pieces_and_preserves_shared_support():
     for text in ("hello", "▁foo", "[]", "\u200d", "॥", "॑"):
         assert piece_allowed(piece(text), "latin")

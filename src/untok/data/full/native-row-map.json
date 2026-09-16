@@ -20553,7 +20553,9 @@
     20359,
     20360
   ],
-  "layout": "profiles_v4_dense_native_blank_last",
+  "inactive_native_ids": [],
+  "inactive_source_weights_preserved": true,
+  "layout": "profiles_v5_original_slots_native_blank_last",
   "removed_ids_require_retokenization": false,
   "schema_version": 1,
   "source_blank_id": 13087,

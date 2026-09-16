@@ -11,7 +11,8 @@ from sentencepiece import sentencepiece_model_pb2 as pb
 
 from .unigram import NativeTokenizerAdapter, _digest, _load, _vocabulary, native_id_map, validate_native_prefix
 
-ALGORITHM = "native_sentencepiece_unigram_profiles_v4"
+ALGORITHM = "native_sentencepiece_unigram_profiles_v5"
+V4_ALGORITHM = "native_sentencepiece_unigram_profiles_v4"
 LEGACY_ALGORITHM = "native_sentencepiece_unigram_preserved_v3"
 POLICY_SHA256 = "ab80a9e5104ee13b8f7ced2c47f0ec49a45a33ab9b1a4b0030f596ba8106292c"
 SELECTION_SHA256 = "2acb9490e1a710ceac79f6d34b7eac1e72d5d6179ace72753d6405032456190e"
@@ -165,10 +166,10 @@ def _preserved_v3_artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
     return files, manifest, mapping, public
 
 
-def _artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
+def _profiles_v4_artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
     """Build v4 from the pinned source, preserving retained piece messages."""
     from .bundles import PROFILES, script_policy
-    from .profile_policy import piece_allowed, indic_addition_allowed, profile_policy
+    from .profile_policy import piece_allowed, indic_addition_allowed, profile_policy_v4 as profile_policy
     from .runtime import IdMap
 
     if profile not in PROFILES:
@@ -306,7 +307,7 @@ def _artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
              "nemo-id-map.json": _json(public.to_dict()), "vocabulary.json": _json(_vocabulary(target, public)),
              "cleanup.json": _json(cleanup)}
     manifest = {
-        "schema_version": 1, "algorithm": ALGORITHM, "profile": profile, "tokenizer_version": 4,
+        "schema_version": 1, "algorithm": V4_ALGORITHM, "profile": profile, "tokenizer_version": 4,
         "status": "tokenizer_profile_candidate", "structural_passed": True,
         "checkpoint_validated": False, "asr_validated": False,
         "requires_retokenized_training_labels": profile != "original",
@@ -322,6 +323,98 @@ def _artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
         "tokenizer_sha256": _digest(model_bytes), "normalizer_sha256": _digest(base.normalizer_spec.SerializeToString()),
         "files": {name: _digest(raw) for name, raw in files.items()},
     }
+    return files, manifest, mapping, public
+
+
+def _reserved_piece(index: int) -> pb.ModelProto.SentencePiece:
+    """A disabled physical row, never an additional text token."""
+    return pb.ModelProto.SentencePiece(
+        piece=f"<unused_nemotron_{index}>", score=0.0,
+        type=pb.ModelProto.SentencePiece.UNUSED,
+    )
+
+
+def _stable_public_map(base_bytes: bytes, model_bytes: bytes):
+    """Keep the original public text IDs and the established pad/blank slots."""
+    from .runtime import IdMap
+
+    base_size = len(_load(base_bytes).pieces)
+    size = len(_load(model_bytes).pieces)
+    reverse = tuple(range(base_size)) + tuple(range(base_size + 2, size + 2)) + (base_size + 1,)
+    forward = [None] * (size + 2)
+    for native, public in enumerate(reverse):
+        forward[public] = native
+    return IdMap(tuple(forward), reverse, base_size, base_size + 1, size,
+                 _digest(model_bytes), _digest(base_bytes))
+
+
+def _artifacts(base_bytes: bytes, full_bytes: bytes, profile: str):
+    """V5 retains every original ID slot and appends only new Indic pieces.
+
+    The frozen v4 recipe selects the active inventory. Excluded original
+    pieces are replaced with UNUSED slots, so selection never renumbers a
+    retained token or makes another language's pieces available for encoding.
+    """
+    from .profile_policy import piece_allowed, profile_policy
+
+    files, manifest, old_mapping, _ = _profiles_v4_artifacts(base_bytes, full_bytes, profile)
+    base, compact = _load(base_bytes), _load(files["tokenizer.model"])
+    base_size = len(base.pieces)
+    target = pb.ModelProto()
+    target.CopyFrom(compact)
+    inactive = [i for i, piece in enumerate(base.pieces) if not piece_allowed(piece, profile)]
+    inactive_set = set(inactive)
+    reverse = list(range(base_size))
+    target.ClearField("pieces")
+    for index, piece in enumerate(base.pieces):
+        target.pieces.add().CopyFrom(_reserved_piece(index) if index in inactive_set else piece)
+    for index, old in enumerate(old_mapping["target_native_to_full_native"][:-1]):
+        if old >= base_size:
+            target.pieces.add().CopyFrom(compact.pieces[index])
+            reverse.append(old)
+    size = len(target.pieces)
+    if profile != "original":
+        target.trainer_spec.vocab_size = size
+    model_bytes = base_bytes if profile == "original" else target.SerializeToString()
+    _load(model_bytes)
+    for index, original in enumerate(base.pieces):
+        if index not in inactive_set and target.pieces[index].SerializeToString() != original.SerializeToString():
+            raise ValueError(f"Retained original Nemotron ID changed: {index}")
+    forward = [None] * len(old_mapping["full_native_to_target_native"])
+    for new, old in enumerate(reverse):
+        forward[old] = new
+    forward[-1] = size
+    mapping = {
+        **old_mapping, "layout": "profiles_v5_original_slots_native_blank_last",
+        "source_native_to_target_native": list(range(base_size)) + [size],
+        "full_native_to_target_native": forward,
+        "target_native_to_full_native": reverse + [len(forward) - 1],
+        "target_blank_id": size, "inactive_native_ids": inactive,
+        "inactive_source_weights_preserved": True,
+    }
+    public = _stable_public_map(base_bytes, model_bytes)
+    cleanup = json.loads(files["cleanup.json"])
+    policy = profile_policy(profile)
+    if "unicode_script_policy" in cleanup["profile_policy"]:
+        policy["unicode_script_policy"] = cleanup["profile_policy"]["unicode_script_policy"]
+    cleanup.update(profile_policy=policy, profile_scope=policy["scope"],
+                   retained_piece_ids_scores_types_preserved=True,
+                   original_native_row_slots_preserved=base_size,
+                   inactive_native_ids=inactive, inactive_token_type="UNUSED",
+                   inactive_acoustic_outputs_must_be_masked=bool(inactive))
+    files.update({"tokenizer.model": model_bytes, "native-row-map.json": _json(mapping),
+                  "nemo-id-map.json": _json(public.to_dict()),
+                  "vocabulary.json": _json(_vocabulary(target, public)), "cleanup.json": _json(cleanup)})
+    manifest.update(algorithm=ALGORITHM, tokenizer_version=5,
+                    native_vocabulary_size=size, native_blank_id=size,
+                    active_vocabulary_size=size - len(inactive), inactive_native_slot_count=len(inactive),
+                    original_native_row_slots_preserved=base_size,
+                    original_native_text_ids_unchanged=True,
+                    original_native_text_id_scope="Every retained original piece; excluded original slots are inactive",
+                    native_blank_id_unchanged=size == base_size,
+                    public_pad_id=public.hf_pad_id, public_blank_id=public.hf_blank_id,
+                    tokenizer_sha256=_digest(model_bytes),
+                    files={name: _digest(raw) for name, raw in files.items()})
     return files, manifest, mapping, public
 
 
@@ -355,12 +448,12 @@ def build_clean_bundles(bundle: str | Path, output: str | Path):
 
 
 class CleanTokenizerAdapter(NativeTokenizerAdapter):
-    """Validate v4 profiles or historical v3 bundles against their exact recipe."""
+    """Validate current or historical bundles against their exact recipe."""
 
     def __init__(self, directory):
         directory = Path(directory)
         manifest = json.loads((directory / "manifest.json").read_text())
-        if manifest.get("algorithm") not in {ALGORITHM, LEGACY_ALGORITHM}:
+        if manifest.get("algorithm") not in {ALGORITHM, V4_ALGORITHM, LEGACY_ALGORITHM}:
             raise ValueError("Expected a versioned native tokenizer profile")
         profile = manifest.get("profile", "")
         names = {"base-tokenizer.model", "full-tokenizer.model", "tokenizer.model", "native-row-map.json",
@@ -370,7 +463,8 @@ class CleanTokenizerAdapter(NativeTokenizerAdapter):
         actual = {name: (directory / name).read_bytes() for name in names}
         if any(_digest(raw) != manifest["files"][name] for name, raw in actual.items()):
             raise ValueError("Tokenizer profile file hash mismatch")
-        build = _preserved_v3_artifacts if manifest["algorithm"] == LEGACY_ALGORITHM else _artifacts
+        build = {LEGACY_ALGORITHM: _preserved_v3_artifacts, V4_ALGORITHM: _profiles_v4_artifacts,
+                 ALGORITHM: _artifacts}[manifest["algorithm"]]
         expected, expected_manifest, mapping, public = build(
             actual["base-tokenizer.model"], actual["full-tokenizer.model"], profile)
         if actual != expected or manifest != expected_manifest:
@@ -386,7 +480,25 @@ class CleanTokenizerAdapter(NativeTokenizerAdapter):
         self.backend = spm.SentencePieceProcessor(model_proto=self.model_bytes)
         self.tokenizer = self
         self.vocab_size = self.backend.get_piece_size()
+        self.inactive_native_ids = tuple(mapping.get("inactive_native_ids", ()))
+        self._inactive_native_id_set = frozenset(self.inactive_native_ids)
+        self.active_native_ids = tuple(i for i in range(self.vocab_size) if i not in self._inactive_native_id_set)
+        self.active_vocab_size = len(self.active_native_ids)
         self.blank_id = public.model_blank_id
         self.pad_id = self.blank_id
         self.unk_id, self.bos_id, self.eos_id = self.backend.unk_id(), self.backend.bos_id(), self.backend.eos_id()
         self.vocab = self.get_vocab()
+
+    def get_vocab(self) -> dict[str, int]:
+        """Active text pieces at their real IDs, excluding reserved slots."""
+        return {self.backend.id_to_piece(i): i for i in self.active_native_ids}
+
+    def get_acoustic_vocab(self) -> dict[str, int]:
+        """Dense physical inventory for NeMo; inactive rows require masking."""
+        return {self.backend.id_to_piece(i): i for i in range(self.vocab_size)}
+
+    def _text_ids(self, ids):
+        result = super()._text_ids(ids)
+        if any(i in self._inactive_native_id_set for i in result):
+            raise ValueError("Inactive reserved token ID is not a text label")
+        return result

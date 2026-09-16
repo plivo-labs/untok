@@ -1,0 +1,312 @@
+{
+  "base_tokenizer_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+  "profiles": {
+    "full": {
+      "active_size": 20360,
+      "added_active": 7273,
+      "all_original_checkpoint_slots_identity": true,
+      "altered_original_proto": 0,
+      "ascii_a_native": [
+        2,
+        38
+      ],
+      "ascii_a_public": [
+        2,
+        38
+      ],
+      "base_bytes_identical": false,
+      "bundle_manifest_sha256": "02ede11284b37eb6b0da1b14f44232ba1f5e358a5ff84c82001730959dd69f29",
+      "devanagari_original": 196,
+      "devanagari_retained_same_id": 196,
+      "dormant_checkpoint_rows_identity": true,
+      "examples": {
+        "<bg-BG>": {
+          "current": 1,
+          "original": 1
+        },
+        "<en-US>": {
+          "current": 2947,
+          "original": 2947
+        },
+        "<hi-IN>": {
+          "current": 3247,
+          "original": 3247
+        },
+        "a": {
+          "current": 38,
+          "original": 38
+        },
+        "o": {
+          "current": 46,
+          "original": 46
+        },
+        "क": {
+          "current": 3251,
+          "original": 3251
+        },
+        "Ỳ": {
+          "current": 13086,
+          "original": 13086
+        },
+        "▁": {
+          "current": 2,
+          "original": 2
+        },
+        "▁в": {
+          "current": 45,
+          "original": 45
+        },
+        "▁है": {
+          "current": 3260,
+          "original": 3260
+        }
+      },
+      "first_added_id": 13087,
+      "get_vocab_exact_active_matches": true,
+      "inactive_excluded_from_get_vocab": true,
+      "inactive_slots": 0,
+      "locale_tags_active": 39,
+      "moved_original_ids": 0,
+      "normalizer_exact": true,
+      "omitted_original_spellings": 0,
+      "physical_size": 20360,
+      "public_original_id_mismatches": 0,
+      "retained_original": 13087,
+      "runtime_direct_id_mismatches": {},
+      "same_original_id": 13087,
+      "sha256": "815ee2313f17db264eb681f4f5a1a322fbb05c1667d9808fb3fb357ae749b857",
+      "source_protos_unchanged_at_id": 13087
+    },
+    "latin": {
+      "active_size": 2653,
+      "added_active": 0,
+      "all_original_checkpoint_slots_identity": true,
+      "altered_original_proto": 0,
+      "ascii_a_native": [
+        2,
+        38
+      ],
+      "ascii_a_public": [
+        2,
+        38
+      ],
+      "base_bytes_identical": false,
+      "bundle_manifest_sha256": "8302b9537bae83ad9e2d86437fae560da1581694c22ab9414251ab3b41c156e6",
+      "devanagari_original": 196,
+      "devanagari_retained_same_id": 1,
+      "dormant_checkpoint_rows_identity": true,
+      "examples": {
+        "<bg-BG>": {
+          "current": null,
+          "original": 1
+        },
+        "<en-US>": {
+          "current": 2947,
+          "original": 2947
+        },
+        "<hi-IN>": {
+          "current": null,
+          "original": 3247
+        },
+        "a": {
+          "current": 38,
+          "original": 38
+        },
+        "o": {
+          "current": 46,
+          "original": 46
+        },
+        "क": {
+          "current": null,
+          "original": 3251
+        },
+        "Ỳ": {
+          "current": 13086,
+          "original": 13086
+        },
+        "▁": {
+          "current": 2,
+          "original": 2
+        },
+        "▁в": {
+          "current": null,
+          "original": 45
+        },
+        "▁है": {
+          "current": null,
+          "original": 3260
+        }
+      },
+      "first_added_id": null,
+      "get_vocab_exact_active_matches": true,
+      "inactive_excluded_from_get_vocab": true,
+      "inactive_slots": 10434,
+      "locale_tags_active": 28,
+      "moved_original_ids": 0,
+      "normalizer_exact": true,
+      "omitted_original_spellings": 10434,
+      "physical_size": 13087,
+      "public_original_id_mismatches": 0,
+      "retained_original": 2653,
+      "runtime_direct_id_mismatches": {},
+      "same_original_id": 2653,
+      "sha256": "cc81c301126e4ea5c3e2d40603488fc89556cc04759e0c1f5485da97b249d382",
+      "source_protos_unchanged_at_id": 2653
+    },
+    "latin-indic": {
+      "active_size": 10372,
+      "added_active": 7273,
+      "all_original_checkpoint_slots_identity": true,
+      "altered_original_proto": 0,
+      "ascii_a_native": [
+        2,
+        38
+      ],
+      "ascii_a_public": [
+        2,
+        38
+      ],
+      "base_bytes_identical": false,
+      "bundle_manifest_sha256": "a9e4a89aae55f3f6369af6c64882e2c1dfe6ea7d1e08d5200b3c9063821a7a81",
+      "devanagari_original": 196,
+      "devanagari_retained_same_id": 196,
+      "dormant_checkpoint_rows_identity": true,
+      "examples": {
+        "<bg-BG>": {
+          "current": null,
+          "original": 1
+        },
+        "<en-US>": {
+          "current": 2947,
+          "original": 2947
+        },
+        "<hi-IN>": {
+          "current": 3247,
+          "original": 3247
+        },
+        "a": {
+          "current": 38,
+          "original": 38
+        },
+        "o": {
+          "current": 46,
+          "original": 46
+        },
+        "क": {
+          "current": 3251,
+          "original": 3251
+        },
+        "Ỳ": {
+          "current": 13086,
+          "original": 13086
+        },
+        "▁": {
+          "current": 2,
+          "original": 2
+        },
+        "▁в": {
+          "current": null,
+          "original": 45
+        },
+        "▁है": {
+          "current": 3260,
+          "original": 3260
+        }
+      },
+      "first_added_id": 13087,
+      "get_vocab_exact_active_matches": true,
+      "inactive_excluded_from_get_vocab": true,
+      "inactive_slots": 9988,
+      "locale_tags_active": 29,
+      "moved_original_ids": 0,
+      "normalizer_exact": true,
+      "omitted_original_spellings": 9988,
+      "physical_size": 20360,
+      "public_original_id_mismatches": 0,
+      "retained_original": 3099,
+      "runtime_direct_id_mismatches": {},
+      "same_original_id": 3099,
+      "sha256": "bcd18a8e540bf46ac920eedef498b3d6d7d00424bfae2a25fd79b7e5ac0c9c79",
+      "source_protos_unchanged_at_id": 3099
+    },
+    "original": {
+      "active_size": 13087,
+      "added_active": 0,
+      "all_original_checkpoint_slots_identity": true,
+      "altered_original_proto": 0,
+      "ascii_a_native": [
+        2,
+        38
+      ],
+      "ascii_a_public": [
+        2,
+        38
+      ],
+      "base_bytes_identical": true,
+      "bundle_manifest_sha256": "4839890ba1106ab6e9648806c8282893e31f116bc05f8c13eb0e222e5e06095f",
+      "devanagari_original": 196,
+      "devanagari_retained_same_id": 196,
+      "dormant_checkpoint_rows_identity": true,
+      "examples": {
+        "<bg-BG>": {
+          "current": 1,
+          "original": 1
+        },
+        "<en-US>": {
+          "current": 2947,
+          "original": 2947
+        },
+        "<hi-IN>": {
+          "current": 3247,
+          "original": 3247
+        },
+        "a": {
+          "current": 38,
+          "original": 38
+        },
+        "o": {
+          "current": 46,
+          "original": 46
+        },
+        "क": {
+          "current": 3251,
+          "original": 3251
+        },
+        "Ỳ": {
+          "current": 13086,
+          "original": 13086
+        },
+        "▁": {
+          "current": 2,
+          "original": 2
+        },
+        "▁в": {
+          "current": 45,
+          "original": 45
+        },
+        "▁है": {
+          "current": 3260,
+          "original": 3260
+        }
+      },
+      "first_added_id": null,
+      "get_vocab_exact_active_matches": true,
+      "inactive_excluded_from_get_vocab": true,
+      "inactive_slots": 0,
+      "locale_tags_active": 39,
+      "moved_original_ids": 0,
+      "normalizer_exact": true,
+      "omitted_original_spellings": 0,
+      "physical_size": 13087,
+      "public_original_id_mismatches": 0,
+      "retained_original": 13087,
+      "runtime_direct_id_mismatches": {},
+      "same_original_id": 13087,
+      "sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
+      "source_protos_unchanged_at_id": 13087
+    }
+  },
+  "schema_version": 1,
+  "scope": "Exhaustive comparison of every original Nemotron piece against each packaged profile, with native/public API checks. Reserved UNUSED slots are not active text pieces.",
+  "tokenizer_version": 5
+}

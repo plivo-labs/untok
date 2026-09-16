@@ -1,9 +1,9 @@
 # Language coverage evidence
 
 Vocabulary scope is not a certificate of complete orthography, dialect coverage
-or speech accuracy. Version 4 has four distinct profiles: an exact `original`
-Nemotron model, compact `latin` and `latin-indic` subsets, and `full` with the
-original Nemotron bank plus Indic/shared additions. No added rare-Latin or
+or speech accuracy. Version 5 has four profiles with stable included Nemotron
+IDs: an exact `original` model, `latin`/`latin-indic` with inactive reserved slots,
+and `full` with the original bank plus Indic/shared additions. No added rare-Latin or
 Unicode case/decomposition inventory is imported into these runtime profiles.
 
 The evaluation measures every supplied language against every bundle. Required
@@ -34,17 +34,20 @@ is public read-speech reference text derived from parallel FLORES sentences,
 licensed CC BY 4.0. Only 7,588,052 bytes of TSV metadata were downloaded; no audio
 is needed. Source files are pinned to commit
 `70bb2e84b976b7e960aa89f1c648e09c59f894dd` and individual SHA256 digests in
-[the v4 policy](../configs/language-coverage-v4.json).
+[the v5 policy](../configs/language-coverage-v5.json).
 
 FLEURS provides Bokmål for the Norwegian profile. **Nynorsk remains unvalidated.**
 Regional English, Spanish, Portuguese, Arabic, and other variants are not each
 represented by independent corpora. Mandarin uses the `cmn_hans_cn` configuration.
 Language-to-source details and these limits are recorded in the policy.
 
-## Current v4 results
+## Current v5 results
 
-The [version 4 report](../configs/language-coverage-v4-results.json) evaluates all
-four current model hashes using the [v4 policy](../configs/language-coverage-v4.json).
+The fresh [version 5 report](../configs/language-coverage-v5-results.json) binds
+all four current tokenizer hashes and the [v5 policy](../configs/language-coverage-v5.json).
+It was recomputed after building the stable-ID models, using the same pinned
+sentences. Every reported text metric matches the separate v4 run on this corpus;
+that comparison does not validate acoustic masking or speech behavior.
 All 56 language profiles have evidence. All normalizer comparisons and all
 representable normalized round trips pass. Coverage remains incomplete, so the
 reported status is **complete_with_coverage_gaps**, not a zero-unknown pass.
@@ -67,7 +70,7 @@ The full machine report also evaluates every out-of-scope combination.
 | `latin-indic` | 61 / 33,027 | 0 / 20,055 |
 | `full` | 51 / 33,027 | 0 / 20,055 |
 
-V4 follows the requested original-only Latin repertoire. The earlier added rare
+V5 follows the requested original-only Latin repertoire. The earlier added rare
 Latin and Unicode case/decomposition inventories are excluded, so the earlier
 v3 coverage gains do not carry over. Full development has 154 unknown tokens;
 Latin-plus-Indic has 181. The higher unknown counts do not satisfy the previous
@@ -79,6 +82,13 @@ The original baseline is also evaluated on all Indic text, but its required
 Indic scope is Hindi only. It has 201 unknown-bearing Hindi development records
 out of 1,753 and 23 reserve records out of 898. This does not establish support
 for the other 21 Indic profiles.
+
+## Historical v4 results
+
+The [v4 report](../configs/language-coverage-v4-results.json) remains unchanged.
+It measures compact subset IDs, whereas v5 reserves inactive slots. Its evidence
+belongs to those historical model hashes; v5's current metrics above come from
+a separate fresh run, not from relabeling the old report.
 
 ## Original v1 baseline
 
@@ -115,7 +125,7 @@ The superseded v3 models were measured on the same frozen text. The
 [version 3 report](../configs/language-coverage-v3-results.json) preserves their
 model hashes and keeps every language, bundle and transcript view explicit.
 V3 retained the original multilingual bank and extra Latin coverage in every
-profile; its results do not qualify the different v4 inventories.
+profile; its results do not qualify the current v5 artifacts.
 All 56 profiles have evidence; all representable normalized round trips and
 normalizer comparisons pass.
 
@@ -173,8 +183,8 @@ freeze hash; missing data is not reconstructed from another script or source.
 Use `fetch --offline` to verify and prepare already downloaded TSVs without
 network access.
 
-The default command uses `configs/language-coverage-v4.json` and the separately
-prepared `.cache/language-coverage/prepared-v4` corpus manifest. The source and
+The default command uses `configs/language-coverage-v5.json` and the separately
+prepared `.cache/language-coverage/prepared-v5` corpus manifest. The source and
 sentence-selection hashes are unchanged from earlier measurements.
 
 The script exits 0 only for `passed_on_supplied_text`. Unknowns in an in-scope

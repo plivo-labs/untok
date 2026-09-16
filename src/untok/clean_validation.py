@@ -40,6 +40,8 @@ def _source_selection(manifest: dict) -> tuple[dict, str]:
 def _retained_inventory(adapter, manifest):
     """Independently check saved maps and the permitted metadata changes."""
     from .runtime import IdMap
+    from .profile_policy import piece_allowed
+    from .clean import _stable_public_map
 
     base, full, model = pb.ModelProto(), pb.ModelProto(), pb.ModelProto()
     base.ParseFromString(adapter.base_model_bytes)
@@ -47,6 +49,10 @@ def _retained_inventory(adapter, manifest):
     model.ParseFromString(adapter.model_bytes)
     validate_native_prefix(adapter.base_model_bytes, adapter.full_model_bytes)
     base_size, size = len(base.pieces), len(model.pieces)
+    stable_slots = manifest["tokenizer_version"] == 5
+    inactive = {i for i, piece in enumerate(base.pieces) if stable_slots and not piece_allowed(piece, adapter.profile)}
+    if stable_slots and tuple(sorted(inactive)) != adapter.inactive_native_ids:
+        raise ValueError("Inactive native slots disagree with the profile")
     mapping = adapter.full_native_to_subset_native
     base_mapping = adapter.source_native_to_target_native
     if (len(mapping) != len(full.pieces) + 1 or mapping[-1] != size
@@ -60,13 +66,26 @@ def _retained_inventory(adapter, manifest):
         if type(new) is not int or not 0 <= new < size or new in mapped:
             raise ValueError("Native row mapping must be injective and contain text IDs only")
         mapped.add(new)
+        if stable_slots and old < base_size:
+            if new != old:
+                raise ValueError(f"Original native ID changed: {old}")
+            if old in inactive:
+                expected = pb.ModelProto.SentencePiece(piece=f"<unused_nemotron_{old}>", score=0.0,
+                                                       type=pb.ModelProto.SentencePiece.UNUSED)
+                if model.pieces[new].SerializeToString() != expected.SerializeToString():
+                    raise ValueError(f"Native piece message changed at inactive slot {old}")
+                continue
+        if stable_slots and old >= base_size and new < base_size:
+            raise ValueError("New piece reuses an original native ID")
         if full.pieces[old].SerializeToString() != model.pieces[new].SerializeToString():
             raise ValueError(f"Native piece message changed at source ID {old}")
         if old < base_size:
             retained_base.add(new)
     legacy = manifest["tokenizer_version"] == 3
     if not legacy and mapped != set(range(size)):
-        raise ValueError("V4 profile contains text rows without pinned source provenance")
+        raise ValueError("Profile contains rows without pinned source provenance")
+    if stable_slots and tuple(base_mapping[:-1]) != tuple(range(base_size)):
+        raise ValueError("Original row slots lost their source provenance")
     prefix_preserved = legacy or adapter.profile in {"original", "full"}
     if prefix_preserved:
         prefix = validate_native_prefix(adapter.base_model_bytes, adapter.model_bytes)
@@ -94,12 +113,13 @@ def _retained_inventory(adapter, manifest):
             metadata.ClearField("pieces")
             metadata.trainer_spec.ClearField("vocab_size")
         if expected.SerializeToString() != actual.SerializeToString() or model.trainer_spec.vocab_size != size:
-            raise ValueError("Native metadata changed outside compact vocabulary declarations")
+            raise ValueError("Native metadata changed outside profile vocabulary declarations")
         prefix = {"native_entries_preserved": len(retained_base), "native_vocabulary_size": size,
-                  "new_pieces": size - len(retained_base), "base_tokenizer_sha256": _digest(adapter.base_model_bytes),
+                  "new_pieces": size - len(retained_base) - len(inactive), "base_tokenizer_sha256": _digest(adapter.base_model_bytes),
                   "tokenizer_sha256": _digest(adapter.model_bytes)}
-        expected_public = IdMap(tuple(range(size)) + (None, size), tuple(range(size)) + (size + 1,),
-                                size, size + 1, size, _digest(adapter.model_bytes), _digest(adapter.base_model_bytes))
+        expected_public = (_stable_public_map(adapter.base_model_bytes, adapter.model_bytes) if stable_slots else
+                           IdMap(tuple(range(size)) + (None, size), tuple(range(size)) + (size + 1,),
+                                 size, size + 1, size, _digest(adapter.model_bytes), _digest(adapter.base_model_bytes)))
     prefix["preserved"] = prefix_preserved
     return model, base, retained_base, prefix, expected_public
 
@@ -161,9 +181,9 @@ def validate_clean_tokenizer(
 ) -> dict:
     """Verify native identity, addition quality and fresh target corpus evidence.
 
-    Every retained source piece message is immutable. Original/full preserve
-    native text IDs; compact profiles have explicit row maps and only change
-    vocabulary declarations. Inherited limitations are reported independently;
+    Every retained source piece message is immutable. V5 also preserves its
+    original native ID; excluded slots are inactive. Historical compact profiles
+    retain their explicit maps. Inherited limitations are reported independently;
     additions must pass every quality gate. Training text is opened
     for usage checks, and reserve access requires an exact artifact receipt.
     """
@@ -181,11 +201,13 @@ def validate_clean_tokenizer(
     model, source_base, retained_base, prefix, expected_mapping = _retained_inventory(adapter, manifest)
     base_size = len(source_base.pieces)
     prefix_preserved = prefix["preserved"]
+    stable_ids = prefix_preserved or manifest["tokenizer_version"] == 5
+    inactive = set(getattr(adapter, "inactive_native_ids", ()))
     source_normalizer_sha = _digest(source_base.normalizer_spec.SerializeToString())
     cleanup = _json(bundle / "cleanup.json")
     source_selection, selection_sha = _source_selection(manifest)
     selection, roles = _roles(source_selection, adapter, cleanup)
-    quality = _inventory_quality(adapter.model_bytes, set(range(len(model.pieces))) - retained_base)
+    quality = _inventory_quality(adapter.model_bytes, set(range(len(model.pieces))) - retained_base - inactive)
     inherited_quality = _inventory_quality(adapter.model_bytes, retained_base)
     original_quality = _inventory_quality(adapter.base_model_bytes)
     coverage = {lang: {"script": entry.get("script"), "required_characters": len(entry["characters"]),
@@ -217,19 +239,21 @@ def validate_clean_tokenizer(
               "inventory_quality_scope": "Only source additions are release-gated; retained original Nemotron piece messages remain byte-identical.",
               "inherited_inventory_quality": inherited_quality,
               "original_base_inventory_quality": original_quality,
-              "inherited_inventory_policy": "Report inherited normalization aliases and dominated pieces without changing retained scores, types or normalization; compact profiles explicitly remap IDs.",
+              "inherited_inventory_policy": "Report inherited normalization aliases and dominated pieces without changing retained scores, types or normalization. V5 retains original IDs; historical compact profiles use explicit maps.",
               "native_prefix": prefix,
               "selection_quality": roles, "gates": structural_gates,
               "structural_passed": all(structural_gates.values()),
               "native_vocabulary_size": proc.get_piece_size(), "native_blank_id": adapter.blank_id,
+              "active_vocabulary_size": proc.get_piece_size() - len(inactive),
+              "inactive_native_slot_count": len(inactive),
               "public_pad_id": adapter.id_map.hf_pad_id, "public_blank_id": adapter.id_map.hf_blank_id,
               "corpus_status": "incomplete", "corpus_gates": {}, "corpora": {},
               "missing_profiles": sorted(policy["profiles"]), "empty_profiles": [],
-              "old_ID_compatibility": prefix_preserved,
-              "old_ID_compatibility_scope": "Original/full preserve the original Nemotron text IDs. Compact profiles remap retained rows; omitted rows cannot be reused. Acoustic blank follows the explicit map.",
-              "original_text_id_range": [0, base_size - 1] if prefix_preserved else None,
+              "old_ID_compatibility": stable_ids,
+              "old_ID_compatibility_scope": "V5 preserves every retained original text ID; excluded slots cannot be used as labels. Historical compact profiles remap rows. Acoustic blank follows its explicit map.",
+              "original_text_id_range": [0, base_size - 1] if stable_ids else None,
               "original_native_entries_preserved": len(retained_base),
-              "original_public_pad_and_blank_preserved": prefix_preserved,
+              "original_public_pad_and_blank_preserved": stable_ids,
               "requires_retokenized_training_labels": manifest["requires_retokenized_training_labels"],
               "training_label_scope": "Original accepts original Nemotron labels unchanged. Other profiles require labels generated with the selected tokenizer; migration from a larger source may additionally omit labels."}
     manifest_path = files = None

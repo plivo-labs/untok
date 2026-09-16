@@ -122,6 +122,25 @@ def test_removed_output_can_change_predictions_despite_exact_retained_logits():
     assert after.argmax(-1).item() == 0
 
 
+def test_logit_comparison_excludes_only_explicit_inactive_target_rows():
+    torch = pytest.importorskip("torch")
+    old, new = inspect_nemo_layout(toy_model(4)), inspect_nemo_layout(toy_model(4))
+    left = torch.tensor([[1., 2., 3., 4., 5.]])
+    right = left.clone()
+    right[:, [1, 3]] = -torch.inf
+    mapping = (0, 1, 2, 3, 4)
+    with pytest.raises(ValueError, match="non-finite"):
+        compare_retained_logits(left, right, old, new, mapping)
+    report = compare_retained_logits(left, right, old, new, mapping, inactive_target_ids=(1, 3))
+    assert report["passed"] and report["inactive_target_outputs_excluded"] == [1, 3]
+    right[:, 2] += 1
+    with pytest.raises(ValueError, match="logits changed"):
+        compare_retained_logits(left, right, old, new, mapping, inactive_target_ids=(1, 3))
+    for invalid in ((4,), (1, 1), (True,), (-1,)):
+        with pytest.raises(ValueError, match="Inactive logit IDs"):
+            compare_retained_logits(left, right, old, new, mapping, inactive_target_ids=invalid)
+
+
 @pytest.mark.parametrize("mapping", [
     (0, 1, 2, 3), (0, 1, 2, 3, None), (0, 1, 2, 3, 4),
     (0, 1, 1, 3, 6), (0, True, 2, 3, 6), (0, 1.0, 2, 3, 6),
@@ -277,8 +296,8 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
     old, new = inspect_nemo_layout(source), inspect_nemo_layout(target)
     retained = [index for index, dest in enumerate(mapping) if dest is not None]
     removed = [index for index, dest in enumerate(mapping) if dest is None]
-    assert (old.blank_id == new.blank_id) == (is_base and profile == "original")
-    if is_base and profile in {"original", "full"}:
+    assert (old.blank_id == new.blank_id) == (is_base and profile in {"original", "latin"})
+    if is_base:
         assert not removed
         assert mapping[:-1] == tuple(range(old.blank_id))
     else:
@@ -315,6 +334,11 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
     expected_new = {key: initial[key][additions].clone() for key in new.row_keys}
 
     target.load_state_dict(transfer_native_state_dict(original, initial, old, new, mapping))
+    from untok.native_runtime import install_native_output_mask
+
+    target.tokenizer = adapter
+    mask = install_native_output_mask(target)
+    assert mask["inactive_output_rows"] == len(adapter.inactive_native_ids)
     migrated = target.state_dict()
     report = verify_native_state_transfer(original, migrated, old, new, mapping)
     assert report["removed_source_text_rows"] == len(removed)
@@ -329,9 +353,10 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
         assert torch.equal(migrated[key], original[key])
     assert all(torch.equal(original[key], value) for key, value in source.state_dict().items())
 
-    # Verify retained prediction prefixes and raw logits with the real compact
-    # map; removed logits and changed softmax denominators are not compared.
-    old_prefix = torch.tensor([[old.blank_id, *retained[:3], retained[2]]])
+    # Dormant source Parameters survive, but their outputs are deliberately
+    # masked and cannot be compared as active logits or used as text labels.
+    active_retained = [index for index in retained[:-1] if mapping[index] not in adapter.inactive_native_ids]
+    old_prefix = torch.tensor([[old.blank_id, *active_retained[:3], active_retained[2]]])
     new_prefix = torch.tensor([[mapping[index] for index in old_prefix[0].tolist()]])
     features = torch.randn(1, old_prefix.shape[1], 4)
 
@@ -339,7 +364,8 @@ def test_real_clean_mapping_transfers_synthetic_checkpoint_and_relocates_blank(
         predicted, _ = model.decoder.prediction["rnn"](model.decoder.prediction["embed"](prefix))
         return model.joint.joint_net(model.encoder(features) + predicted)
 
-    assert compare_retained_logits(forward(source, old_prefix), forward(target, new_prefix), old, new, mapping)["passed"]
+    assert compare_retained_logits(forward(source, old_prefix), forward(target, new_prefix), old, new, mapping,
+                                   inactive_target_ids=adapter.inactive_native_ids)["passed"]
 
     # A tensor state round trip checks these rows survive serialization. This is
     # deliberately not a NeMo .nemo restoration or an acoustic-quality test.
