@@ -11,14 +11,14 @@ from untok.language_validation import prepare_fleurs_corpus, validate_language_c
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--policy", type=Path, default=Path("configs/language-coverage-v4.json"))
+    parser.add_argument("--policy", type=Path, default=Path("configs/language-coverage-v5.json"))
     sub = parser.add_subparsers(dest="command", required=True)
     fetch = sub.add_parser("fetch", help="Download pinned TSV metadata only; no audio")
     fetch.add_argument("--cache", type=Path, default=Path(".cache/language-coverage/fleurs"))
-    fetch.add_argument("--output", type=Path, default=Path(".cache/language-coverage/prepared-v4"))
+    fetch.add_argument("--output", type=Path, default=Path(".cache/language-coverage/prepared-v5"))
     fetch.add_argument("--offline", action="store_true", help="Use already hash-verified TSV files")
     validate = sub.add_parser("validate", help="Evaluate all four installed bundles")
-    validate.add_argument("--corpora", type=Path, default=Path(".cache/language-coverage/prepared-v4/manifest.json"))
+    validate.add_argument("--corpora", type=Path, default=Path(".cache/language-coverage/prepared-v5/manifest.json"))
     validate.add_argument("--frozen-indic-manifest", type=Path)
     validate.add_argument("--output", type=Path, required=True)
     args = parser.parse_args(argv)

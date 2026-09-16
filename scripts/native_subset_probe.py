@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compare compacted native checkpoints using explicitly restricted source outputs.
+"""Compare native profile checkpoints using explicitly restricted source outputs.
 
 Versioned profiles can be compared with their pinned original NVIDIA base or full Untok v1
 source. The controls use identical retained rows and an identical source
@@ -104,8 +104,21 @@ def mapped_hypothesis_equal(source, target, mapping):
     return source["text"] == target["text"] and [mapping[i] for i in ids] == target["native_ids"]
 
 
+def active_retained_row_pairs(old_layout, new_layout, mapping, inactive_target_ids=()):
+    """Select active paired outputs without changing preserved checkpoint rows."""
+    from untok.native_checkpoint import retained_row_pairs
+
+    old_ids, new_ids = retained_row_pairs(old_layout, new_layout, mapping)
+    inactive = set(inactive_target_ids)
+    if (len(inactive) != len(inactive_target_ids)
+            or any(type(index) is not int or not 0 <= index < new_layout.blank_id for index in inactive)):
+        raise ValueError("Inactive probe IDs must be unique target text rows")
+    pairs = [(old, new) for old, new in zip(old_ids, new_ids) if new not in inactive]
+    return tuple(old for old, _ in pairs), tuple(new for _, new in pairs)
+
+
 def retained_trace_checks(source_trace, target_trace, target_head, old_layout, new_layout, mapping,
-                          *, atol=1e-6, rtol=1e-5):
+                          *, atol=1e-6, rtol=1e-5, inactive_target_ids=()):
     import torch
     from untok.native_checkpoint import compare_retained_logits
 
@@ -123,7 +136,8 @@ def retained_trace_checks(source_trace, target_trace, target_head, old_layout, n
         if not torch.allclose(left, right, atol=atol, rtol=rtol):
             matched = False
         try:
-            comparison = compare_retained_logits(logits, actual, old_layout, new_layout, mapping, atol=atol, rtol=rtol)
+            comparison = compare_retained_logits(logits, actual, old_layout, new_layout, mapping,
+                                                 atol=atol, rtol=rtol, inactive_target_ids=inactive_target_ids)
             logit_errors.append(comparison["max_absolute_error"])
         except ValueError:
             matched = False
@@ -131,23 +145,24 @@ def retained_trace_checks(source_trace, target_trace, target_head, old_layout, n
     with torch.inference_mode():
         for states, logits in source_trace["probes"]:
             replay = target_head(states.to(target_head.weight.device))
-            comparison = compare_retained_logits(logits, replay, old_layout, new_layout, mapping, atol=atol, rtol=rtol)
+            comparison = compare_retained_logits(logits, replay, old_layout, new_layout, mapping,
+                                                 atol=atol, rtol=rtol, inactive_target_ids=inactive_target_ids)
             replay_errors.append(comparison["max_absolute_error"])
     return {"passed": matched, "source_joint_calls": source_trace["calls"],
             "reduced_joint_calls": target_trace["calls"], "captured_probes": len(source_trace["probes"]),
             "max_joint_input_absolute_error": max(input_errors, default=None),
             "max_retained_logit_absolute_error": max(logit_errors, default=None),
             "max_fixed_input_replay_absolute_error": max(replay_errors, default=None),
+            "inactive_target_outputs_excluded": sorted(inactive_target_ids),
             "atol": atol, "rtol": rtol,
-            "scope": "bounded actual greedy states and fixed audio-state replay for retained source rows"}
+            "scope": "bounded actual greedy states and fixed audio-state replay for active retained source rows"}
 
 
 def offline_row(original, reduced, row, prompt, old_layout, new_layout, mapping):
     from untok.checkpoint_validation import _head_trace
     from untok.inference import _transcribe_with_verified_prompt
-    from untok.native_checkpoint import retained_row_pairs
-
-    old_ids, new_ids = retained_row_pairs(old_layout, new_layout, mapping)
+    inactive = tuple(getattr(reduced.tokenizer, "inactive_native_ids", ()))
+    old_ids, new_ids = active_retained_row_pairs(old_layout, new_layout, mapping, inactive)
     arguments = (Path(row["audio"]), row["audio_sha256"], prompt["control_target_lang"])
     original_unrestricted, original_prompt = _transcribe_with_verified_prompt(original, *arguments)
     with _head_trace(original.joint.joint_net[-1], old_to_new=old_ids) as old_trace:
@@ -156,7 +171,8 @@ def offline_row(original, reduced, row, prompt, old_layout, new_layout, mapping)
     with _head_trace(reduced.joint.joint_net[-1], old_to_new=new_ids) as new_trace:
         value, new_prompt = _transcribe_with_verified_prompt(reduced, *arguments)
         masked = hypothesis(value)
-    probes = retained_trace_checks(old_trace, new_trace, reduced.joint.joint_net[-1], old_layout, new_layout, mapping)
+    probes = retained_trace_checks(old_trace, new_trace, reduced.joint.joint_net[-1], old_layout, new_layout, mapping,
+                                   inactive_target_ids=inactive)
     value, active_prompt = _transcribe_with_verified_prompt(reduced, *arguments)
     active_control = hypothesis(value)
     if prompt["requested_target_lang"] == prompt["control_target_lang"]:
@@ -226,14 +242,14 @@ def configure_streaming(models):
 def streaming_row(original, reduced, row, prompt, old_layout, new_layout, mapping):
     from real_streaming_probe import run_stream
     from untok.inference import _load_audio_tensor
-    from untok.native_checkpoint import retained_row_pairs
 
     class IdentityMap:
         def to_canonical(self, ids, drop_blank=False):
             return list(ids)
 
     waveform = _load_audio_tensor(Path(row["audio"]), row["audio_sha256"], 16000)
-    old_ids, new_ids = retained_row_pairs(old_layout, new_layout, mapping)
+    inactive = tuple(getattr(reduced.tokenizer, "inactive_native_ids", ()))
+    old_ids, new_ids = active_retained_row_pairs(old_layout, new_layout, mapping, inactive)
     control = prompt["control_target_lang"]
     for model in (original, reduced):
         model.set_inference_prompt(control)
@@ -249,7 +265,8 @@ def streaming_row(original, reduced, row, prompt, old_layout, new_layout, mappin
     baseline, old_trace = run(original, "source_restricted", control, old_ids)
     masked, new_trace = run(reduced, "reduced_masked", control, new_ids)
     active, _ = run(reduced, "reduced_active_control", control)
-    probes = retained_trace_checks(old_trace, new_trace, reduced.joint.joint_net[-1], old_layout, new_layout, mapping)
+    probes = retained_trace_checks(old_trace, new_trace, reduced.joint.joint_net[-1], old_layout, new_layout, mapping,
+                                   inactive_target_ids=inactive)
     if prompt["requested_target_lang"] == control:
         requested = active
     else:
@@ -281,6 +298,7 @@ def main():
     from untok.checkpoint import inspect_nemo_layout
     from untok.checkpoint_validation import _configure_eager_decoding, _equivalent_inference_config
     from untok.native_checkpoint import retained_row_pairs
+    from untok.native_runtime import verify_native_output_mask
 
     torch.manual_seed(0)
     torch.set_float32_matmul_precision("highest")
@@ -303,20 +321,30 @@ def main():
     write(args.output, report)
     try:
         original, reduced = load(args.source, args.device), load(args.checkpoint, args.device)
+        report["inactive_output_mask_before_probe"] = verify_native_output_mask(reduced)
         profile = getattr(reduced.tokenizer, "profile", None)
         selected = choose_rows(rows(args.manifest, ("test", "valid")), profile, args.languages, args.max_per_locale)
         mapping, source_evidence = select_probe_inventory(original, reduced.tokenizer, migration)
         report.update(source_evidence)
         old_layout, new_layout = inspect_nemo_layout(original), inspect_nemo_layout(reduced)
         retained, targets = retained_row_pairs(old_layout, new_layout, mapping)
-        # The row map records whether this profile removes any source outputs.
+        inactive = tuple(getattr(reduced.tokenizer, "inactive_native_ids", ()))
+        inactive_set = set(inactive)
+        active_retained, _ = active_retained_row_pairs(old_layout, new_layout, mapping, inactive)
+        # v5 keeps dormant source weights at their original rows, while paired
+        # inference controls must mask their now-inactive output identities.
         report["all_source_text_rows_retained"] = all(value is not None for value in mapping[:-1])
+        report["all_source_text_outputs_active"] = all(value is not None and value not in inactive_set
+                                                       for value in mapping[:-1])
         if (sha_bytes(reduced.tokenizer.model_bytes) != migration["tokenizer_sha256"]
                 or json.loads(json.dumps(reduced.tokenizer.id_map.to_dict())) != migration["id_mapping"]):
             raise ValueError("Restored native tokenizer differs from migration metadata")
         config = _equivalent_inference_config(original, reduced, "greedy_batch", allow_removed_prompts=True)
         report.update(profile=profile, config_section_sha256=config["config_section_sha256"],
                       retained_source_rows_including_blank=len(retained), removed_source_text_rows=mapping.count(None),
+                      active_retained_source_rows_including_blank=len(active_retained),
+                      inactive_target_text_rows=len(inactive),
+                      inactive_mapped_source_text_rows=len(retained) - len(active_retained),
                       added_target_rows=new_layout.output_size-len(targets),
                       native_blank_id=new_layout.blank_id, source_blank_id=old_layout.blank_id)
         for model in (original, reduced):
@@ -350,7 +378,7 @@ def main():
         report["selection_policy"] = "Shortest clips per target locale after filtering retained source-audio languages"
         report["passed"] = bool(report["utterances"]) and all(item["passed"] for item in report["utterances"])
         report["status"] = "passed_on_supplied_audio" if report["passed"] else "failed"
-        report["scope"] = "Restricted pinned source versus compacted native migration controls; requested-prompt inference is diagnostic only"
+        report["scope"] = "Active restricted pinned source versus native profile migration controls; requested-prompt inference is diagnostic only"
     except Exception as error:
         report.update(status="failed", passed=False, error=str(error), traceback=traceback.format_exc())
         raise

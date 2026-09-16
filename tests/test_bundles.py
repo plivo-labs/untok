@@ -1,4 +1,4 @@
-"""Dense script bundles must preserve pieces and behavior, not acoustic accuracy."""
+"""Legacy dense and current stable-ID profiles preserve their declared contracts."""
 from __future__ import annotations
 
 import hashlib
@@ -221,7 +221,9 @@ def test_actual_candidate_all_22_alphabets_and_protected_groups(tmp_path):
     original = load_tokenizer_bundle(full)
     latin = load_tokenizer_bundle(output / "latin")
     indic = load_tokenizer_bundle(output / "latin-indic")
-    assert (latin.vocab_size, indic.vocab_size, original.vocab_size) == (2653, 10372, 20550)
+    assert (latin.vocab_size, indic.vocab_size, original.vocab_size) == (13087, 20360, 20550)
+    assert (latin.active_vocab_size, indic.active_vocab_size) == (2653, 10372)
+    assert (len(latin.inactive_native_ids), len(indic.inactive_native_ids)) == (10434, 9988)
     assert sum(i is None for i in indic.full_native_to_subset_native[13087:-1]) == 190
     for entry in policy["profiles"].values():
         for character in entry["characters"]:
@@ -235,6 +237,10 @@ def test_actual_candidate_all_22_alphabets_and_protected_groups(tmp_path):
             original_id = original.token_to_id(piece)
             reduced_id = adapter.token_to_id(piece)
             assert adapter.full_native_to_subset_native[original_id] == reduced_id
+            if original_id < len(adapter.source_native_to_target_native) - 1:
+                assert reduced_id == original_id
+            else:
+                assert reduced_id >= len(adapter.source_native_to_target_native) - 1
             assert adapter.backend.get_score(reduced_id) == original.backend.get_score(original_id)
     for adapter in (latin, indic):
         assert not set(policy["protected_piece_groups"]["latin190"]["pieces"]) & set(adapter.vocab)
@@ -245,7 +251,7 @@ def test_actual_candidate_all_22_alphabets_and_protected_groups(tmp_path):
             if all(character_allowed(c, adapter.profile) for c in normalized):
                 ids = original.text_to_ids(text)
                 remapped = [adapter.full_native_to_subset_native[i] for i in ids]
-                if None not in remapped:
+                if None not in remapped and not set(remapped) & set(adapter.inactive_native_ids):
                     assert adapter.text_to_ids(text) == remapped
                     assert adapter.ids_to_text(adapter.text_to_ids(text)) == original.ids_to_text(ids)
     assert before == {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in full.iterdir() if p.is_file()}
@@ -383,16 +389,22 @@ def test_zip_resource_manifest_rejects_path_traversal(package_resources, tmp_pat
             load_tokenizer_bundle("latin")
 
 
-@pytest.mark.parametrize("profile,size", [("original", 13087), ("latin", 2653), ("latin-indic", 10372), ("full", 20360)])
-def test_installed_profiles_include_the_frozen_candidate(profile, size):
+@pytest.mark.parametrize("profile,size,active_size", [
+    ("original", 13087, 13087), ("latin", 13087, 2653),
+    ("latin-indic", 20360, 10372), ("full", 20360, 20360),
+])
+def test_installed_profiles_include_the_frozen_candidate(profile, size, active_size):
     from untok.bundles import load_tokenizer
 
     expected_hashes = {
         "original": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
-        "latin": "035d463b9906a291b3428d56f1622dc758bb05b388b4d66905e52b68d93ea714",
-        "latin-indic": "e8035679586667af932d47d467fb9ff8696c8819fbcf49168633a6df20d67dfc",
+        "latin": "cc81c301126e4ea5c3e2d40603488fc89556cc04759e0c1f5485da97b249d382",
+        "latin-indic": "bcd18a8e540bf46ac920eedef498b3d6d7d00424bfae2a25fd79b7e5ac0c9c79",
         "full": "815ee2313f17db264eb681f4f5a1a322fbb05c1667d9808fb3fb357ae749b857",
     }
     tokenizer = load_tokenizer(profile)
     assert tokenizer.vocab_size == size
+    assert tokenizer.active_vocab_size == active_size
+    assert len(tokenizer.get_vocab()) == active_size
+    assert len(tokenizer.inactive_native_ids) == size - active_size
     assert hashlib.sha256(tokenizer.model_bytes).hexdigest() == expected_hashes[profile]

@@ -10,6 +10,9 @@
     "unicode_case_decomposition_additions": false
   },
   "global_score_refit": false,
+  "inactive_acoustic_outputs_must_be_masked": false,
+  "inactive_native_ids": [],
+  "inactive_token_type": "UNUSED",
   "inherited_normalization_changing_pieces": [
     "？",
     "⁇",
@@ -275,11 +278,13 @@
   ],
   "locale_tag_types": "retained source tags preserve their original types",
   "original_native_entries_preserved": 13087,
+  "original_native_row_slots_preserved": 13087,
   "original_normalizer_and_metadata_preserved": true,
   "original_normalizer_unchanged": true,
   "original_piece_ids_scores_types_preserved": true,
   "profile": "full",
   "profile_policy": {
+    "additions_start_after_original_bank": true,
     "allowed_locale_tags": [
       "<ar-AR>",
       "<bg-BG>",
@@ -322,14 +327,16 @@
       "<zh-CN>"
     ],
     "compact_ids": false,
+    "excluded_original_slots": "Reserved UNUSED placeholders; never text labels or acoustic outputs",
     "indic_shared_additions": true,
     "latin_extension_additions": false,
     "locale_filter_before_piece_type": false,
     "new_output_language_tags": false,
     "normalizer": "Original Nemotron normalization preserved exactly",
     "profile": "full",
-    "profile_version": 4,
+    "profile_version": 5,
     "prompt_registry": "Separate from output-token inventory; preserve selected source prompt slots",
+    "retained_original_ids_unchanged": true,
     "schema_version": 1,
     "scope": "Complete original Nemotron bank at unchanged IDs plus approved Indic/shared additions only",
     "source_addition_policy": "Use hash-pinned source-selection entries; exclude approved_rare_latin_character provenance and all later Latin coverage extensions",
@@ -1288,6 +1295,7 @@
       "reason": "outside_profile"
     }
   ],
+  "retained_piece_ids_scores_types_preserved": true,
   "retained_piece_messages_preserved": true,
   "retained_piece_scores": "unchanged",
   "strictly_dominated_additions_remaining": 0

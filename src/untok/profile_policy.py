@@ -57,7 +57,7 @@ def allowed_token_locales(profile: str) -> frozenset[str]:
     return LATIN_TOKEN_LOCALES | (ORIGINAL_TOKEN_LOCALES & INDIC_PROMPT_LOCALES)
 
 
-def profile_policy(profile: str) -> dict:
+def profile_policy_v4(profile: str) -> dict:
     """Serializable selection contract; it never changes the legacy v1 policy."""
     _check_profile(profile)
     scopes = {
@@ -82,6 +82,19 @@ def profile_policy(profile: str) -> dict:
         "indic_shared_additions": profile in {"latin-indic", "full"},
         "compact_ids": profile in {"latin", "latin-indic"},
     }
+
+
+def profile_policy(profile: str) -> dict:
+    """Current scope keeps original row numbers, including inactive holes."""
+    policy = profile_policy_v4(profile)
+    policy.update(
+        profile_version=5,
+        compact_ids=False,
+        retained_original_ids_unchanged=True,
+        excluded_original_slots="Reserved UNUSED placeholders; never text labels or acoustic outputs",
+        additions_start_after_original_bank=True,
+    )
+    return policy
 
 
 def piece_allowed(piece: pb.ModelProto.SentencePiece, profile: str) -> bool:

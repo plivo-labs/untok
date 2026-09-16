@@ -467,7 +467,7 @@ def validate_native_tokenizer(
         raise ValueError("Use phase dev/reserve and a nonnegative integer max_examples")
     bundle, policy_file = Path(bundle_path), Path(policy_path)
     if _json(bundle / "manifest.json").get("algorithm") in {
-        "native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4",
+        "native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4", "native_sentencepiece_unigram_profiles_v5",
     }:
         from .clean_validation import validate_clean_tokenizer
 

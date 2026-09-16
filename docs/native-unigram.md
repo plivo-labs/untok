@@ -1,4 +1,4 @@
-# Native Unigram tokenizer v4
+# Native Unigram tokenizer v5
 
 The package includes `original`, `latin`, `latin-indic` and `full`. The profiles
 share the original Nemotron normalizer but have different vocabulary and ID
@@ -11,11 +11,18 @@ contracts. See [profile and ID details](native-preservation.md).
 - `full` keeps the entire original Nemotron bank at its original IDs and appends
   the selected Indic vocabulary and required shared characters.
 
-The text vocabulary sizes are 13,087 (`original`), 2,653 (`latin`), 10,372
-(`latin-indic`) and 20,360 (`full`). The two subsets compact their text IDs. A matching checkpoint must remap retained
-rows and omit removed rows. `original` and `full` preserve native text IDs
-`0..13086`; extending `full` can nevertheless change segmentation. Every bundle
-records the source-to-target map and its native/public ID layouts.
+Active counts are 13,087 (`original`), 2,653 (`latin`), 10,372 (`latin-indic`)
+and 20,360 (`full`). Physical text slots are 13,087 for Original/Latin and 20,360
+for Latin-plus-Indic/Full. Included original pieces retain their Nemotron IDs,
+scores and types. Excluded subset IDs remain as reserved `UNUSED` placeholders;
+they are not compacted. New Indic/shared pieces start at native ID 13087.
+
+Stable IDs preserve physical checkpoint rows, including inactive rows, so a
+restricted active vocabulary does not shrink the acoustic model.
+The adapter's `active_vocab_size` counts enabled pieces; `vocab_size` counts
+physical slots. Its `vocab` mapping contains active pieces with their stable IDs. Use the Untok
+NeMo runtime: it must mask inactive logits as well as skip inactive tokenizer
+pieces. Every profile preserves the original normalizer.
 
 ## Use and rebuild
 
@@ -32,10 +39,10 @@ native text IDs. `text_to_public_ids()` and `public_ids_to_text()` use the
 separate public layout; do not pass those IDs directly as acoustic labels.
 
 ```sh
-untok clean --bundle src/untok/data/source --output artifacts/profiles-v4
-untok check --bundle artifacts/profiles-v4/original
-untok check --bundle artifacts/profiles-v4/latin-indic
-untok package --bundle artifacts/profiles-v4/full --output artifacts/export-v4
+untok clean --bundle src/untok/data/source --output artifacts/profiles-v5
+untok check --bundle artifacts/profiles-v5/original
+untok check --bundle artifacts/profiles-v5/latin-indic
+untok package --bundle artifacts/profiles-v5/full --output artifacts/export-v5
 ```
 
 `clean` reconstructs all four profiles from the pinned historical source and
@@ -46,11 +53,12 @@ or acoustic evaluation. Bundle source models are retained for reproduction.
 
 ## Vocabulary, tags and normalization
 
-Retained strings, scores and piece types are copied from their source; there is
+Included original strings, scores and piece types stay at their source IDs; there is
 no joint score refit. Added strings must be unique, normalization-stable,
 non-dominated and either required coverage with witnesses or used in training.
-Inherited aliases and redundant native pieces are reported separately. Exact
-original/full preservation takes precedence over deleting an original piece.
+Inherited aliases and redundant native pieces are reported separately. Disabled
+subset slots retain their positions with `UNUSED` placeholders; their original
+spellings are absent from the active vocabulary.
 
 Subsets filter locale tags explicitly, rather than treating their Latin spelling
 as permission to retain every language tag. They retain existing tags only;
@@ -67,11 +75,11 @@ release. Coverage remains finite; no byte fallback is introduced.
 
 ```sh
 untok validate \
-  --bundle artifacts/profiles-v4/full \
+  --bundle artifacts/profiles-v5/full \
   --policy configs/clean-validation.json \
   --corpora /path/to/frozen-data/manifest.json \
   --phase dev \
-  --output reports/profiles-v4-dev.json
+  --output reports/profiles-v5-dev.json
 ```
 
 The policy must match the selected artifact's hashes and intended alphabets.
@@ -95,9 +103,9 @@ per-bundle results and remaining gaps.
 | `base-tokenizer.model` | Exact original NVIDIA tokenizer |
 | `full-tokenizer.model` | Historical full v1 source tokenizer |
 | `cleanup.json` | Profile selection and preservation evidence |
-| `native-row-map.json` | Original/source-to-target rows, including removed rows and acoustic blank |
+| `native-row-map.json` | Original/source-to-target rows, including retained inactive rows and acoustic blank |
 | `nemo-id-map.json` | Public/native ID mapping |
-| `vocabulary.json` | Pieces, scores, types and ID layouts |
+| `vocabulary.json` | Active pieces, reserved inactive slots, scores, types and ID layouts |
 | `manifest.json` | Artifact hashes, recipe identity and scope |
 
 The internal `data/source` bundle preserves the historical fitted selection.
@@ -124,10 +132,13 @@ selection needs a separately versioned profile recipe and evaluation.
 `build-unigram`, `check-unigram` and `validate-unigram` remain aliases.
 Historical BPE commands use the `legacy-bpe` prefix.
 
-All four current profiles passed [real NeMo save/reload and exact retained-weight
-verification](../configs/native-checkpoint-v4-results.json). These checks establish
-the recorded migrations, not speech accuracy or training behavior.
+The [v5 save/reload results](../configs/native-checkpoint-v5-results.json) verify
+all four real CPU migrations, exact preservation of every original tensor value,
+and inactive-output masks before save and after reload. The
+[v4 results](../configs/native-checkpoint-v4-results.json) remain historical
+measurements of compact subsets.
 
 Text pieces do not teach acoustic meanings. [Checkpoint migration](native-checkpoint.md),
-speech fine-tuning and held-out WER/CER evaluation are separate steps. Historical
-v1/v3 checkpoint or audio results apply only to their recorded artifact hashes.
+speech fine-tuning and held-out WER/CER evaluation are separate steps; v5 GPU
+execution and speech accuracy remain unvalidated. Historical
+v1/v3/v4 checkpoint or audio results apply only to their recorded artifact hashes.

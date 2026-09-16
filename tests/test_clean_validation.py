@@ -66,7 +66,7 @@ def receipt(candidate):
 
 def test_dispatch_preserves_original_native_identity_and_scopes_quality_to_additions(candidate):
     result = validate_native_tokenizer(*candidate)
-    assert result["algorithm"] == ALGORITHM and result["tokenizer_version"] == 4
+    assert result["algorithm"] == ALGORITHM and result["tokenizer_version"] == 5
     assert result["structural_passed"] and result["inventory_quality"]["passed"]
     assert result["corpus_status"] == "passed"
     assert result["corpora"]["ml"]["roundtrip_failures"] == 0
@@ -174,11 +174,11 @@ def test_validator_independently_rejects_original_native_mutations(candidate, mo
     model = pb.ModelProto()
     model.ParseFromString(adapter.model_bytes)
     if mutation == "piece":
-        model.pieces[100].piece += "altered"
+        model.pieces[38].piece += "altered"
     elif mutation == "score":
-        model.pieces[100].score -= 1
+        model.pieces[38].score -= 1
     elif mutation == "type":
-        model.pieces[100].type = pb.ModelProto.SentencePiece.UNUSED
+        model.pieces[38].type = pb.ModelProto.SentencePiece.UNUSED
     elif mutation == "normalizer":
         model.normalizer_spec.add_dummy_prefix = not model.normalizer_spec.add_dummy_prefix
     else:
@@ -206,10 +206,10 @@ def test_profile_validation_distinguishes_original_rows_from_additions(clean_bun
     assert result["inventory_quality"]["checked_piece_count"] == added
     assert result["inherited_inventory_quality"]["checked_piece_count"] == retained
     assert result["original_native_entries_preserved"] == retained
-    assert result["old_ID_compatibility"] == (profile == "original")
+    assert result["old_ID_compatibility"] is True
     assert result["native_prefix"]["preserved"] == (profile == "original")
     assert result["requires_retokenized_training_labels"] == (profile != "original")
-    assert result["public_pad_id"] == (13087 if profile == "original" else retained + added)
+    assert result["public_pad_id"] == 13087
     assert result["public_blank_id"] == result["public_pad_id"] + 1
     if not added:
         assert result["training_usage_status"] == "passed"
@@ -220,7 +220,7 @@ def test_profile_validation_distinguishes_original_rows_from_additions(clean_bun
 
 
 @pytest.mark.parametrize("mutation", ["piece", "score", "type", "normalizer", "metadata", "mapping"])
-def test_compact_validation_independently_rejects_retained_row_and_metadata_mutations(clean_bundle, mutation):
+def test_stable_validation_independently_rejects_retained_row_and_metadata_mutations(clean_bundle, mutation):
     from sentencepiece import sentencepiece_model_pb2 as pb
     from untok.clean import CleanTokenizerAdapter
     from untok.clean_validation import _retained_inventory
@@ -231,18 +231,18 @@ def test_compact_validation_independently_rejects_retained_row_and_metadata_muta
     model = pb.ModelProto()
     model.ParseFromString(adapter.model_bytes)
     if mutation == "piece":
-        model.pieces[100].piece += "altered"
+        model.pieces[38].piece += "altered"
     elif mutation == "score":
-        model.pieces[100].score -= 1
+        model.pieces[38].score -= 1
     elif mutation == "type":
-        model.pieces[100].type = pb.ModelProto.SentencePiece.UNUSED
+        model.pieces[38].type = pb.ModelProto.SentencePiece.UNUSED
     elif mutation == "normalizer":
         model.normalizer_spec.add_dummy_prefix = not model.normalizer_spec.add_dummy_prefix
     elif mutation == "metadata":
         model.trainer_spec.model_prefix += "altered"
     else:
         forward = list(adapter.full_native_to_subset_native)
-        old = next(index for index, new in enumerate(forward) if new == 100)
+        old = next(index for index, new in enumerate(forward) if new == 38)
         forward[old] = None
         adapter.full_native_to_subset_native = tuple(forward)
         base_forward = list(adapter.source_native_to_target_native)
@@ -250,4 +250,27 @@ def test_compact_validation_independently_rejects_retained_row_and_metadata_muta
         adapter.source_native_to_target_native = tuple(base_forward)
     adapter.model_bytes = model.SerializeToString()
     with pytest.raises(ValueError, match="Native piece message|Native metadata|source provenance"):
+        _retained_inventory(adapter, manifest)
+
+
+@pytest.mark.parametrize("mutation", ["reactivate", "restore_excluded_piece", "hide_inactive_slot"])
+def test_reserved_slots_cannot_be_reactivated_or_hidden_from_validation(clean_bundle, mutation):
+    from sentencepiece import sentencepiece_model_pb2 as pb
+    from untok.clean import CleanTokenizerAdapter
+    from untok.clean_validation import _retained_inventory
+
+    bundle = clean_bundle.parent / "latin"
+    adapter = CleanTokenizerAdapter(bundle)
+    manifest = json.loads((bundle / "manifest.json").read_text())
+    model = pb.ModelProto.FromString(adapter.model_bytes)
+    assert 1 in adapter.inactive_native_ids  # Original Bulgarian language tag.
+    if mutation == "reactivate":
+        model.pieces[1].type = pb.ModelProto.SentencePiece.NORMAL
+    elif mutation == "restore_excluded_piece":
+        base = pb.ModelProto.FromString(adapter.base_model_bytes)
+        model.pieces[1].CopyFrom(base.pieces[1])
+    else:
+        adapter.inactive_native_ids = tuple(i for i in adapter.inactive_native_ids if i != 1)
+    adapter.model_bytes = model.SerializeToString()
+    with pytest.raises(ValueError, match="Native piece message|Inactive native slots"):
         _retained_inventory(adapter, manifest)

@@ -219,6 +219,60 @@ def test_subset_actual_head_capture_and_retained_state_replay(probes):
             subset.retained_trace_checks(left, right, target, old, new, mapping)
 
 
+def test_preserved_dormant_rows_are_excluded_from_paired_controls_and_logit_replay(probes):
+    torch = pytest.importorskip("torch")
+    from untok.checkpoint import RNNTLayout
+    from untok.checkpoint_validation import _head_trace
+
+    _, subset = probes
+    source, target = torch.nn.Linear(3, 5), torch.nn.Linear(3, 6)
+    old = RNNTLayout("embed", "weight", "bias", 4, 5)
+    new = RNNTLayout("embed", "weight", "bias", 5, 6)
+    mapping = (0, 1, 2, 3, 5)
+    inactive = (1, 3)
+    old_ids, new_ids = subset.active_retained_row_pairs(old, new, mapping, inactive)
+    assert old_ids == (0, 2, 4)
+    assert new_ids == (0, 2, 5)
+    assert mapping == (0, 1, 2, 3, 5)  # Dormant checkpoint rows remain mapped.
+    assert subset.active_retained_row_pairs(old, new, mapping) == ((0, 1, 2, 3, 4), mapping)
+    for invalid in ((5,), (1, 1), (-1,), (True,)):
+        with pytest.raises(ValueError, match="Inactive probe IDs"):
+            subset.active_retained_row_pairs(old, new, mapping, invalid)
+
+    def mask_dormant_outputs(module, arguments, output):
+        output = output.clone()
+        output[..., list(inactive)] = -torch.inf
+        return output
+
+    with torch.inference_mode():
+        target.weight[list(mapping)] = source.weight
+        target.bias[list(mapping)] = source.bias
+        states = torch.arange(12, dtype=torch.float32).reshape(4, 3) / 10
+        handle = target.register_forward_hook(mask_dormant_outputs)
+        try:
+            with _head_trace(source, old_to_new=old_ids) as left:
+                masked_left = source(states)
+            with _head_trace(target, old_to_new=new_ids) as right:
+                masked_right = target(states)
+            assert torch.isneginf(masked_left[:, list(inactive)]).all()
+            assert torch.isneginf(masked_right[:, [1, 3, 4]]).all()
+            result = subset.retained_trace_checks(left, right, target, old, new, mapping,
+                                                  inactive_target_ids=inactive)
+            assert result["passed"]
+            assert result["inactive_target_outputs_excluded"] == [1, 3]
+            assert result["max_fixed_input_replay_absolute_error"] == 0
+            # Forgetting inactive IDs compares masked -inf to finite source
+            # logits and must fail, rather than passing a misleading control.
+            with pytest.raises(ValueError, match="non-finite"):
+                subset.retained_trace_checks(left, right, target, old, new, mapping)
+            target.bias[0] += 1
+            with pytest.raises(ValueError, match="logits changed"):
+                subset.retained_trace_checks(left, right, target, old, new, mapping,
+                                             inactive_target_ids=inactive)
+        finally:
+            handle.remove()
+
+
 @pytest.fixture(scope="module")
 def compact_probe_bundles(tmp_path_factory):
     from untok.bundles import PROFILES, _subset_artifacts, load_tokenizer_bundle
@@ -227,7 +281,7 @@ def compact_probe_bundles(tmp_path_factory):
     data = Path(__file__).resolve().parents[1] / "src" / "untok" / "data"
     output = tmp_path_factory.mktemp("compact-probe-bundles")
     build_clean_bundles(data / "source", output / "clean")
-    # Public packaging now creates v4 profiles. Build the frozen v1 subset
+    # Public packaging now creates v5 profiles. Build the frozen v1 subset
     # explicitly to continue checking historical receipt compatibility.
     source = load_tokenizer_bundle(data / "source")
     legacy = output / "legacy" / "latin"
@@ -267,7 +321,7 @@ def test_compact_probe_selects_the_exact_migrated_source_map(probes, compact_pro
     }
     actual, evidence = subset.select_probe_inventory(_native_source(raw), target, report)
     assert actual == expected and actual[-1] == target.blank_id
-    if is_base and profile in {"original", "full"}:
+    if is_base:
         assert actual[:-1] == tuple(range(len(actual) - 1))
     else:
         assert any(index is None for index in actual)

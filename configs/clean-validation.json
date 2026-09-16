@@ -2033,7 +2033,7 @@
   "schema_version": 1,
   "source_normalizer_sha256": "fca0e7752aef7e68c02391ae85821eeb71e1b299cd72f91ebd0b4e7bf020bc42",
   "threshold_basis": "No per-language unknown regression and at most 2% dev token-efficiency regression against the frozen v1 full model; reserve requires zero unknowns. Chosen before reading v2 corpus results. Original dev and reserve are previously evaluated data.",
-  "tokenizer_sha256": "782eb9525d3dff47678dc10a69abf58f51752a8016514908769d9056c2b323e2",
-  "tokenizer_version": 3,
-  "validation_scope": "All original Nemotron piece messages, text IDs and model metadata including normalization are unchanged. Only appended NORMAL entries are gated for normalization stability, aliases and strict dominance. Inherited inventory limitations remain explicit evidence. Required text must be representable and retained required additions witnessed. Surviving optional fitted additions require fresh use in the source-pinned training corpus."
+  "tokenizer_sha256": "815ee2313f17db264eb681f4f5a1a322fbb05c1667d9808fb3fb357ae749b857",
+  "tokenizer_version": 5,
+  "validation_scope": "V5 full profile preserves all original Nemotron piece messages, text IDs and model metadata including normalization. Only appended Indic/shared NORMAL entries are gated for normalization stability, aliases and strict dominance. Inherited inventory limitations and existing corpus thresholds remain unchanged. Required text must be representable and retained required additions witnessed. Surviving optional fitted additions require fresh use in the source-pinned training corpus."
 }

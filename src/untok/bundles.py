@@ -23,7 +23,7 @@ def _load_tokenizer_directory(directory: str | Path):
     """Load a verified full native bundle or a separately validated subset."""
     directory = Path(directory)
     manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
-    if manifest.get("algorithm") in {"native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4"}:
+    if manifest.get("algorithm") in {"native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4", "native_sentencepiece_unigram_profiles_v5"}:
         from .clean import CleanTokenizerAdapter
 
         return CleanTokenizerAdapter(directory)
@@ -320,9 +320,9 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
     adapter = load_tokenizer_bundle(bundle)
     source_manifest_bytes = (bundle / "manifest.json").read_bytes()
     source_manifest = json.loads(source_manifest_bytes)
-    clean_source = source_manifest.get("algorithm") in {"native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4"}
+    clean_source = source_manifest.get("algorithm") in {"native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4", "native_sentencepiece_unigram_profiles_v5"}
     if not clean_source and source_manifest.get("algorithm") != "native_sentencepiece_unigram":
-        raise ValueError("Packaging requires a source, v3 or v4 native bundle")
+        raise ValueError("Packaging requires a source or versioned native bundle")
     names = sorted(set(source_manifest["files"]) | {"manifest.json"})
     if any((bundle / name).is_symlink() for name in names):
         raise ValueError("Source bundle files must not be symlinks")

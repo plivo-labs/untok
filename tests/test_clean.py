@@ -1,4 +1,4 @@
-"""Original, compact and expanded native profile contracts and integrity."""
+"""Stable native IDs, inactive vocabulary slots and profile integrity."""
 from __future__ import annotations
 
 import hashlib
@@ -12,6 +12,7 @@ from sentencepiece import sentencepiece_model_pb2 as pb
 
 from untok.bundles import PROFILES, load_tokenizer_bundle
 from untok.clean import ALGORITHM, LEGACY_ALGORITHM, CleanTokenizerAdapter, build_clean_bundles
+from untok.profile_policy import piece_allowed
 from untok.unigram import build_native_tokenizer, native_id_map, validate_native_prefix
 
 
@@ -80,6 +81,115 @@ def test_original_is_an_exact_copy_and_latin_never_adds_pieces(clean_bundles):
         assert "▁в" not in adapters[profile].vocab
     assert "<hi-IN>" not in adapters["latin"].vocab
     assert "<hi-IN>" in adapters["latin-indic"].vocab
+
+
+@pytest.mark.parametrize("profile,physical_size,active_size,original_active", [
+    ("original", 13087, 13087, 13087),
+    ("latin", 13087, 2653, 2653),
+    ("latin-indic", 20360, 10372, 3099),
+    ("full", 20360, 20360, 13087),
+])
+def test_every_active_original_piece_keeps_its_exact_native_slot(
+    clean_bundles, profile, physical_size, active_size, original_active,
+):
+    output, adapters = clean_bundles
+    adapter = adapters[profile]
+    base = _model(DATA / "source/base-tokenizer.model")
+    target = _model(output / profile / "tokenizer.model")
+    active = set(adapter.active_native_ids)
+    inactive = set(adapter.inactive_native_ids)
+    vocabulary = adapter.get_vocab()
+    expected_original = {index for index, row in enumerate(base.pieces) if piece_allowed(row, profile)}
+    assert len(target.pieces) == adapter.vocab_size == physical_size
+    assert adapter.active_vocab_size == len(vocabulary) == active_size
+    assert len(expected_original) == original_active
+    assert active.isdisjoint(inactive)
+    assert active | inactive == set(range(physical_size))
+    assert active & set(range(13087)) == expected_original
+    assert inactive == set(range(13087)) - expected_original
+    assert set(vocabulary.values()) == active
+    assert adapter.vocab == vocabulary
+    assert adapter.get_acoustic_vocab() == {row.piece: index for index, row in enumerate(target.pieces)}
+    assert adapter.source_native_to_target_native[:-1] == tuple(range(13087))
+    assert adapter.full_native_to_subset_native[:13087] == tuple(range(13087))
+    assert adapter.subset_native_to_full_native[:13087] == tuple(range(13087))
+
+    original_strings = {row.piece for row in base.pieces}
+    placeholders = {target.pieces[index].piece for index in inactive}
+    assert len(placeholders) == len(inactive)
+    assert placeholders.isdisjoint(original_strings)
+    assert placeholders.isdisjoint(vocabulary)
+    for original_id, row in enumerate(base.pieces):
+        actual = target.pieces[original_id]
+        if original_id in active:
+            assert actual.SerializeToString() == row.SerializeToString(), (profile, original_id, row.piece)
+            assert adapter.token_to_id(row.piece) == original_id
+            assert adapter.id_map.to_canonical([original_id]) == [original_id]
+            assert adapter.id_map.to_model([original_id]) == [original_id]
+        else:
+            assert actual.type == pb.ModelProto.SentencePiece.UNUSED
+            assert row.piece not in vocabulary
+            with pytest.raises(ValueError):
+                adapter.token_to_id(row.piece)
+            with pytest.raises(ValueError):
+                adapter.token_to_id(actual.piece)
+    assert adapter.token_to_id("▁") == 2
+    assert adapter.token_to_id("a") == 38
+    assert adapter.token_to_id("o") == 46
+    assert adapter.token_to_id("Ỳ") == 13086
+    assert adapter.text_to_ids("a") == adapter.text_to_public_ids("a") == [2, 38]
+    assert target.normalizer_spec.SerializeToString() == base.normalizer_spec.SerializeToString()
+
+
+def test_indic_additions_are_appended_after_the_entire_original_id_space(clean_bundles):
+    output, adapters = clean_bundles
+    base = _model(DATA / "source/base-tokenizer.model")
+    indic = _model(output / "latin-indic/tokenizer.model")
+    full = _model(output / "full/tokenizer.model")
+    assert len(indic.pieces[13087:]) == len(full.pieces[13087:]) == 7273
+    assert [row.SerializeToString() for row in indic.pieces[13087:]] == [
+        row.SerializeToString() for row in full.pieces[13087:]
+    ]
+    original_strings = {row.piece for row in base.pieces}
+    for index, row in enumerate(indic.pieces[13087:], start=13087):
+        assert row.piece not in original_strings
+        assert index in adapters["latin-indic"].active_native_ids
+        assert adapters["latin-indic"].token_to_id(row.piece) == adapters["full"].token_to_id(row.piece) == index
+        assert adapters["latin-indic"].id_map.to_canonical([index]) == [index + 2]
+    assert set(adapters["latin"].get_vocab()) < original_strings
+    for token, index in adapters["latin"].get_vocab().items():
+        assert adapters["latin-indic"].token_to_id(token) == index
+    for token, original_id in {"<hi-IN>": 3247, "क": 3251, "▁है": 3260}.items():
+        assert base.pieces[original_id].piece == token
+        assert adapters["latin-indic"].token_to_id(token) == original_id
+        assert adapters["full"].token_to_id(token) == original_id
+    # The full profile's model bytes already satisfied this contract in v4.
+    assert hashlib.sha256(adapters["full"].model_bytes).hexdigest() == "815ee2313f17db264eb681f4f5a1a322fbb05c1667d9808fb3fb357ae749b857"
+
+
+@pytest.mark.parametrize("profile", ["latin", "latin-indic"])
+def test_inactive_slots_cannot_be_encoded_or_exposed_as_text_labels(clean_bundles, profile):
+    output, adapters = clean_bundles
+    adapter = adapters[profile]
+    base = _model(DATA / "source/base-tokenizer.model")
+    target = _model(output / profile / "tokenizer.model")
+    inactive = set(adapter.inactive_native_ids)
+    standalone = spm.SentencePieceProcessor(model_file=str(output / profile / "tokenizer.model"))
+    # Exercise every excluded spelling and every placeholder, including the
+    # source USER_DEFINED <bg-BG> tag which otherwise bypasses normal matching.
+    for index in sorted(inactive):
+        for text in (base.pieces[index].piece.replace("▁", " "), target.pieces[index].piece):
+            ids = adapter.text_to_ids(text)
+            assert ids == standalone.encode(text, out_type=int)
+            assert inactive.isdisjoint(ids), (profile, index, text, ids)
+            assert target.pieces[index].piece not in adapter.text_to_tokens(text)
+        for decode in (adapter.ids_to_tokens, adapter.ids_to_text, adapter.public_ids_to_text):
+            with pytest.raises(ValueError, match="[Ii]nactive"):
+                decode([index])
+        with pytest.raises(ValueError, match="[Ii]nactive"):
+            adapter.id_to_token(index)
+    assert "<bg-BG>" not in target.trainer_spec.user_defined_symbols
+    assert 1 in inactive
 
 
 @pytest.mark.parametrize("profile", ["full", "latin-indic"])
@@ -196,29 +306,26 @@ def test_retained_rows_new_rows_and_blank_namespaces_are_unambiguous(clean_bundl
     assert forward[-1] == adapter.source_native_to_target_native[-1] == adapter.blank_id
     assert reverse[-1] == len(original.pieces)
     assert adapter.source_native_to_target_native[:-1] == forward[:len(base.pieces)]
-    if profile in {"original", "full"}:
-        assert adapter.source_native_to_target_native[:-1] == tuple(range(len(base.pieces)))
-        assert adapter.id_map.hf_pad_id == 13087
-        assert adapter.id_map.hf_blank_id == 13088
-    else:
-        assert any(index is None for index in adapter.source_native_to_target_native[:-1])
-        assert adapter.id_map.hf_pad_id == len(target.pieces)
-        assert adapter.id_map.hf_blank_id == len(target.pieces) + 1
+    assert adapter.source_native_to_target_native[:-1] == tuple(range(len(base.pieces)))
+    assert adapter.id_map.hf_pad_id == 13087
+    assert adapter.id_map.hf_blank_id == 13088
     assert None not in reverse[:-1]
     for new_id, old_id in enumerate(reverse[:-1]):
         assert forward[old_id] == new_id
-        assert target.pieces[new_id].SerializeToString() == original.pieces[old_id].SerializeToString()
+        if new_id in adapter.inactive_native_ids:
+            assert new_id == old_id
+            assert target.pieces[new_id].type == pb.ModelProto.SentencePiece.UNUSED
+        else:
+            assert target.pieces[new_id].SerializeToString() == original.pieces[old_id].SerializeToString()
     assert "\u200c" not in adapter.vocab
     assert "Ð" not in adapter.vocab
     for piece in ["？", "⁇", "Ａ", "，", "▁anh", "▁в"]:
         old_id = next(i for i, row in enumerate(original.pieces) if row.piece == piece)
-        if profile in {"original", "full"}:
-            assert forward[old_id] == old_id
+        assert forward[old_id] == old_id
+        if piece in adapter.vocab:
             assert adapter.token_to_id(piece) == old_id
-        elif piece in adapter.vocab:
-            assert forward[old_id] == adapter.token_to_id(piece)
         else:
-            assert forward[old_id] is None
+            assert old_id in adapter.inactive_native_ids
     with pytest.raises(ValueError, match="padding"):
         adapter.public_ids_to_text([adapter.id_map.hf_pad_id])
     with pytest.raises(ValueError, match="blank"):
@@ -374,3 +481,22 @@ def test_frozen_v3_bundles_remain_loadable_after_profile_contract_changes(tmp_pa
     assert adapter.token_to_id("▁в") == 45
     assert "Ð" in adapter.vocab
     assert hashlib.sha256(adapter.model_bytes).hexdigest() == "e250b6b2f47ed337f13c3a957637feada09dbcf6e6d1bf628119647eadb70f12"
+
+
+def test_frozen_v4_compact_bundles_remain_loadable_after_stable_id_changes(tmp_path):
+    from untok.clean import V4_ALGORITHM, _profiles_v4_artifacts
+
+    files, manifest, _, _ = _profiles_v4_artifacts(
+        (DATA / "source/base-tokenizer.model").read_bytes(),
+        (DATA / "source/tokenizer.model").read_bytes(), "latin")
+    assert manifest["algorithm"] == V4_ALGORITHM
+    for name, content in files.items():
+        (tmp_path / name).write_bytes(content)
+    (tmp_path / "manifest.json").write_text(json.dumps(manifest))
+    adapter = load_tokenizer_bundle(tmp_path)
+    assert adapter.vocab_size == adapter.active_vocab_size == 2653
+    assert not adapter.inactive_native_ids
+    assert adapter.token_to_id("▁") == 1
+    assert adapter.token_to_id("a") == 6
+    assert adapter.source_native_to_target_native[38] == 6
+    assert hashlib.sha256(adapter.model_bytes).hexdigest() == "035d463b9906a291b3428d56f1622dc758bb05b388b4d66905e52b68d93ea714"

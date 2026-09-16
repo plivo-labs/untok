@@ -1,18 +1,20 @@
 {
-  "algorithm": "native_sentencepiece_unigram_profiles_v4",
+  "active_vocabulary_size": 13087,
+  "algorithm": "native_sentencepiece_unigram_profiles_v5",
   "asr_validated": false,
   "base_tokenizer_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
   "checkpoint_validated": false,
   "files": {
     "base-tokenizer.model": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
-    "cleanup.json": "75cc574ff0658b17df908423443ea68a265b6f864ac61863f81949a028e66006",
+    "cleanup.json": "a5db10f152a82dcd75853e9a869b4aeec7cf23eeb662952b681452c1dcdb4207",
     "full-tokenizer.model": "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8",
-    "native-row-map.json": "820a1fc7804b782c8476d7c32d8480d7d21924c5d3cb5d27e2ab34597be9e96f",
+    "native-row-map.json": "c0fd3554e5fbb374bb0bf015dc9c049a705d8bebf3d578dc73d9711645513426",
     "nemo-id-map.json": "78abb6d9717d1ebefe984638d03e5373bffe5838a1c98f004ae26d752b9a5e11",
     "tokenizer.model": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
     "vocabulary.json": "6bc9fc17996b03aa59979ed8f1a9639fb6b384b8323e54e2289a8b7d64042edc"
   },
   "full_tokenizer_sha256": "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8",
+  "inactive_native_slot_count": 0,
   "native_blank_id": 13087,
   "native_blank_id_unchanged": true,
   "native_prefix_preserved": true,
@@ -21,6 +23,8 @@
   "original_model_byte_identical": true,
   "original_native_blank_id": 13087,
   "original_native_entries_preserved": 13087,
+  "original_native_row_slots_preserved": 13087,
+  "original_native_text_id_scope": "Every retained original piece; excluded original slots are inactive",
   "original_native_text_ids_unchanged": true,
   "original_native_vocabulary_size": 13087,
   "original_normalizer_unchanged": true,
@@ -32,5 +36,5 @@
   "status": "tokenizer_profile_candidate",
   "structural_passed": true,
   "tokenizer_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
-  "tokenizer_version": 4
+  "tokenizer_version": 5
 }
