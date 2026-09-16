@@ -1,96 +1,101 @@
-# Original Nemotron ID preservation
+# Tokenizer profiles and original Nemotron IDs
 
-The current v3 bundles preserve all **13,087 original SentencePiece entries at
-IDs 0 through 13086**. This is an exhaustive byte comparison of each piece
-message, including spelling, score and type. The original normalizer and every
-other model metadata field are unchanged except the declared vocabulary size.
+Version 4 has four profiles with different preservation contracts.
+
+| Profile | Text entries | Vocabulary | Original native text IDs |
+| --- | ---: | --- | --- |
+| `original` | 13,087 | Exact original Nemotron SentencePiece model | All 13,087 unchanged; model bytes identical |
+| `latin` | 2,653 | Latin, shared punctuation and relevant existing tags | Compact subset IDs; use the row map |
+| `latin-indic` | 10,372 | Latin and the 22 target Indic profiles, shared punctuation and relevant existing tags | Compact subset IDs; use the row map |
+| `full` | 20,360 | Complete original Nemotron bank plus selected Indic additions | Original IDs `0..13086`, scores and types unchanged |
+
+No profile imports the extra rare-Latin or Unicode case/decomposition inventories
+from the superseded release. `latin` is derived only from the original Nemotron
+vocabulary; Indic expansion is kept in `latin-indic` and `full`.
+
 The original model is pinned to SHA256
 `ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291`.
+`original/tokenizer.model` must match those exact bytes; the Untok bundle adds
+wrapper metadata and ID maps without modifying that model.
 
-The earlier v2 compaction candidate violated this contract and is withdrawn.
-Preservation of a source copy or a migration map never substitutes for keeping
-the actual tokenizer entries at their original IDs.
+`full` retains every original piece message at its original ID. Its model
+metadata is unchanged apart from vocabulary length. Subsets preserve retained
+piece messages and the normalizer, while remapping text and special IDs to the
+smaller inventory. Removed original pieces have a `null` source-to-target map.
+Their labels require retokenization from text, not a numeric substitution.
 
-## Profiles and additions
+## Script and tag scope
 
-| Profile | Original entries unchanged | Text entries | Native RNNT blank |
-| --- | ---: | ---: | ---: |
-| `latin` | 13,087 | 13,573 | 13,573 |
-| `latin-indic` | 13,087 | 20,784 | 20,784 |
-| `full` | 13,087 | 20,784 | 20,784 |
+The `latin` and `latin-indic` profiles filter the whole vocabulary, including
+original pieces. Latin-plus-Indic includes the selected Indic/shared additions
+needed by the 22 target profiles. They do not retain the complete multilingual bank. Script
+membership follows the pinned Unicode table, including shared punctuation and
+Script_Extensions. This is a script restriction, not a language detector.
 
-Profiles filter **additions only**. All retain the complete original multilingual
-bank, even its non-Latin pieces. The current full and Latin-plus-Indic vocabularies
-are identical because every selected addition is admitted by Latin-plus-Indic.
-The Latin extension admits 252 original-study additions; the other two admit
-all 7,463. All three append 234 Unicode-derived Latin case/decomposition coverage
-characters at score -32. This is not byte fallback or a joint score refit.
+Language-tag pieces need a separate whitelist because their spellings use Latin
+letters. `latin` retains 28 existing Latin-language locale tags; `latin-indic`
+retains those tags plus the existing Hindi tag. `original` and `full` retain all
+39 original tags. No new output tags are invented for the additional Indic
+languages. Acoustic prompt slots are a separate model input.
 
-Cleanup may reject an added duplicate, unstable spelling or dominated piece.
-It may never remove, renumber or edit an original piece. Consequently inherited
-normalization aliases and dominated pieces remain and are reported separately.
-The original normalizer still changes ZWNJ to space and leaves legacy Malayalam
-chillu spellings distinct. No external spelling cleanup is applied implicitly.
-
-The builder and loader call `validate_native_prefix`; tests independently compare
-every original piece and all metadata. Tampering with original IDs, scores,
-types, normalization or metadata must fail even after artifact hashes are updated.
-Appending pieces can change segmentation despite unchanged original IDs and scores.
+All profiles retain the original SentencePiece normalization behavior: ZWNJ
+becomes a space and legacy Malayalam chillu spellings remain distinct. Native
+aliases and redundant original pieces remain where required by the preservation
+contract. Added-piece quality checks do not claim that the inherited vocabulary
+contains no such limitations. Retained scores are unchanged; no joint score
+refit is performed.
 
 ## Blank and public IDs
 
-SentencePiece has original text IDs `0..13086`; its vocabulary contains no RNNT
-blank. The original acoustic model used blank output **13087**. NeMo expects
-blank after the text vocabulary, so checkpoint migration moves that learned row
-to the final output index shown above. Every original text row stays at its
-original index. Migration copies the learned blank predictor/output rows exactly
-and verifies them before save and after reload; it does not reset them.
+SentencePiece contains text IDs, not an RNNT blank token. NeMo places its
+acoustic blank at the text vocabulary size. Thus `original` keeps native blank
+13087, while other profiles use their own final output row. Checkpoint migration
+copies the learned blank weights to that row; it does not reset them.
 
-Keeping acoustic blank numerically fixed would require a separate acoustic ID
-mapping and coordinated changes to NeMo's predictor, loss and decoding paths.
-The standard blank-last layout avoids that runtime divergence. Consumers storing
-acoustic blank IDs must apply the migration map.
+| Profile | Native text IDs | Native acoustic blank | Placement |
+| --- | --- | ---: | --- |
+| `original` | `0..13086` | 13087 | Final row; unchanged from Nemotron |
+| `latin` | `0..2652` | 2653 | Final row; remapped from 13087 |
+| `latin-indic` | `0..10371` | 10372 | Final row; remapped from 13087 |
+| `full` | `0..20359` | 20360 | Final row; remapped from 13087 |
 
-Untok's separate **public** padding and blank IDs remain **13087 and 13088**.
-New public text IDs begin at 13089. Public IDs must be converted with the supplied
-mapping before use as acoustic labels; they are not the native SentencePiece IDs.
-The existing v1 checkpoint receipts already recorded acoustic blank relocation,
-including original 13087 to full-v1 20550.
+`original` and `full` use public padding 13087 and public blank 13088, with new
+public text IDs beginning at 13089. For the compact `latin` and `latin-indic`
+profiles, public text IDs are `0..N-1`, public padding is `N`, public blank is
+`N+1`, and native acoustic blank is `N`. Use each bundle's `nemo-id-map.json`
+when converting public IDs to acoustic labels.
 
-## Rebuild and validate
-
-```sh
-untok clean --bundle src/untok/data/source --output artifacts/preserved-v3
-untok check --bundle artifacts/preserved-v3/full
-untok validate --bundle artifacts/preserved-v3/full \
-  --policy configs/clean-validation.json \
-  --corpora /path/to/original/frozen-data/manifest.json \
-  --output reports/preserved-v3-dev.json
-```
-
-The extension policy is independently reproducible from the pinned original
-models and Unicode 17 data, with the project's SentencePiece 0.2.1 runtime:
+## Rebuild
 
 ```sh
-python scripts/build_extension_policy.py \
-  --base src/untok/data/source/base-tokenizer.model \
-  --full-model src/untok/data/source/tokenizer.model \
-  --unicode-data /path/to/UnicodeData.txt \
-  --output /path/to/new-policy.json
+untok clean --bundle src/untok/data/source --output artifacts/profiles-v4
+untok check --bundle artifacts/profiles-v4/original
+untok check --bundle artifacts/profiles-v4/full
 ```
 
-This builds a finite character inventory and never compiles a replacement
-normalizer. Its output must equal `src/untok/data/extension-v3/policy.json`.
-Source acquisition and pinned input locations are in [reproduction](native-reproduction.md).
+The recipe pins the original base, historical full source and its vocabulary
+policy. Each bundle contains `base-tokenizer.model` and `full-tokenizer.model`
+as reproducibility inputs; `tokenizer.model` is the selected runtime profile.
+See [reproduction](native-reproduction.md) for source acquisition and fitting.
 
-Current [validation results](../configs/clean-validation-results.json),
-[all-profile training usage](../configs/clean-profile-usage.json) and
-[selection receipt](../configs/clean-selection-receipt.json) bind the v3 hashes.
-Reserve is previously evaluated data and provides a regression check, not a new
-unseen holdout. [Language coverage](language-coverage.md) reports remaining gaps.
-All three real v3 checkpoints passed NeMo save/reload on 16 September 2026.
-Every original text row and all 638,030,384 original learned values are exactly
-preserved; only the acoustic blank row moves. See the
-[migration verification receipt](../configs/native-checkpoint-v3-results.json)
-and [checkpoint guide](native-checkpoint.md). Acoustic accuracy and training
-have not been evaluated for v3.
+## Evidence by version
+
+All four v4 checkpoints passed real NeMo construction, exact retained-tensor
+checks, save and reload on 16 September 2026. `original` keeps the tokenizer
+byte-identical and retains every original learned value. The two subsets omit
+excluded rows and preserve every retained value exactly; `full` retains every
+original value and initializes the added rows. Blank weights are verified at
+the final indices above. The [v4 migration receipt](../configs/native-checkpoint-v4-results.json)
+binds the current tokenizer, bundle, checkpoint and implementation hashes.
+Speech accuracy and training have not been evaluated.
+
+The former v2 compaction candidate was withdrawn. The superseded v3 release kept
+the original multilingual bank in every profile. Its
+[checkpoint migration report](../configs/native-checkpoint-v3-results.json) and
+[language report](../configs/language-coverage-v3-results.json) remain historical
+measurements of their recorded hashes. They do not describe the v4 subsets.
+
+Current checks must bind the exact v4 model and bundle hashes. Structural
+identity, text coverage, checkpoint migration and speech accuracy are distinct
+claims; consult the [tokenizer guide](native-unigram.md),
+[checkpoint guide](native-checkpoint.md) and [language evidence](language-coverage.md).

@@ -1,49 +1,35 @@
 # untok
 
-A SentencePiece Unigram tokenizer for ASR and TTS, extending NVIDIA Nemotron's
-native vocabulary with Indic language support.
+SentencePiece Unigram tokenizers for ASR and TTS, based on NVIDIA Nemotron's
+native tokenizer and extended with Indic vocabulary.
 
 ## Install
-
-On Linux or macOS, clone the repository:
 
 ```sh
 git clone https://github.com/plivo-labs/untok.git
 cd untok
-```
-
-Install with [uv](https://docs.astral.sh/uv/getting-started/installation/):
-
-```sh
 uv sync --locked
 ```
 
-Or use pip with Python 3.11 or later:
-
-```sh
-python3 -m venv .venv
-source .venv/bin/activate
-python -m pip install .
-```
+Or install with Python 3.11 or later: `python -m pip install .`.
 
 ## Choose a bundle
 
-All three bundles are included.
+All four bundles are included.
 
-| Bundle | Text IDs | Includes |
+| Bundle | Text entries | Contents |
 | --- | ---: | --- |
-| `latin` | 13,573 | Original Nemotron bank plus Latin/shared additions |
-| `latin-indic` | 20,784 | Original Nemotron bank plus Latin and Indic additions |
-| `full` | 20,784 | Original Nemotron bank plus all admitted additions |
+| `original` | 13,087 | Exact original Nemotron SentencePiece tokenizer; no added or removed pieces |
+| `latin` | 2,653 | Latin pieces, shared punctuation and relevant existing language tags |
+| `latin-indic` | 10,372 | Latin plus all 22 target Indic profiles, shared punctuation and relevant existing tags |
+| `full` | 20,360 | Complete original Nemotron vocabulary plus the selected Indic vocabulary |
 
-**All 13,087 original Nemotron text IDs (`0..13086`) are unchanged**, along with
-their pieces, scores, types and normalizer. Profiles filter additions only;
-`full` and `latin-indic` currently have identical vocabularies.
+`original` is byte-identical to the original 13,087-piece model. `full` preserves
+all original text IDs, scores and types. The two script subsets use compact IDs
+and explicit checkpoint row maps; their IDs differ from the original model.
+All four use the original Nemotron normalizer.
 
-## Use the tokenizer
-
-Save this as `example.py`. Run `uv run example.py`, or `python example.py` if
-you installed with pip:
+## Use
 
 ```python
 from untok.bundles import load_tokenizer
@@ -54,43 +40,34 @@ print(ids)
 print(tokenizer.ids_to_text(ids))
 ```
 
-Use `"latin"` or `"full"` to select another bundle. You can also pass the path to
-a custom bundle. The example uses native text IDs.
+Select `"original"`, `"latin"` or `"full"` the same way, or pass a bundle directory.
+The example returns native text IDs. Public IDs use a separate mapping.
 
-## Languages
+All four [NeMo migrations](configs/native-checkpoint-v4-results.json) passed exact
+retained-weight checks and save/reload; speech accuracy remains unevaluated.
 
-Text coverage is evaluated across these 56 language profiles. All bundles retain
-the original multilingual vocabulary; see the [coverage report](docs/language-coverage.md)
-for measured gaps.
+## Scope and limitations
 
-**Latin (24):** Croatian, Czech, Danish, Dutch, English, Estonian,
-Finnish, French, German, Hungarian, Italian, Latvian, Lithuanian, Maltese,
-Norwegian (Bokmål), Polish, Portuguese, Romanian, Slovak, Slovenian, Spanish, Swedish,
-Turkish and Vietnamese.
+- The Indic profiles are Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi, Kannada,
+  Kashmiri (Arabic), Konkani, Maithili, Malayalam, Manipuri (Meetei Mayek), Marathi,
+  Nepali, Odia, Punjabi (Gurmukhi), Sanskrit, Santali (Ol Chiki), Sindhi (Devanagari),
+  Tamil, Telugu and Urdu. Shared scripts also permit other languages.
+- Script selection limits the vocabulary; it does not guarantee an inference
+  language or recognition accuracy. Language prompt slots are separate from
+  tokenizer language-tag pieces.
+- Use a [matching checkpoint](docs/native-checkpoint.md). Subsets require row
+  remapping, and expanded vocabularies move the acoustic blank to the last row.
+  New pieces require speech training. Earlier release results do not qualify
+  changed profiles automatically.
+- The unchanged normalizer converts ZWNJ to a space and leaves legacy Malayalam
+  chillu variants distinct. Decoding returns normalized text.
+- Coverage is finite; unknown characters can produce `<unk>`. See the
+  [language evidence and its limits](docs/language-coverage.md).
 
-**Indic (22):**
-Assamese, Bengali, Bodo, Dogri, Gujarati, Hindi, Kannada, Kashmiri (Arabic script),
-Konkani, Maithili, Malayalam, Manipuri (Meetei Mayek), Marathi, Nepali, Odia,
-Punjabi (Gurmukhi), Sanskrit, Santali (Ol Chiki), Sindhi (Devanagari),
-Tamil, Telugu and Urdu.
+[Profile and ID contracts](docs/native-preservation.md) ·
+[Tokenizer guide](docs/native-unigram.md) ·
+[Reproduction](docs/native-reproduction.md) ·
+[Source provenance](THIRD_PARTY.md)
 
-**Other (10):** Arabic, Bulgarian, Greek, Hebrew,
-Japanese, Korean, Mandarin Chinese, Russian, Thai and Ukrainian.
-
-## Limitations
-
-- Existing Nemotron checkpoints need [migration](docs/native-checkpoint.md),
-  which preserves original weights and moves the acoustic blank to the final row.
-  All three migrations passed save/reload verification; speech accuracy remains untested.
-- New pieces can change segmentation and require speech training.
-- The original normalizer is unchanged: ZWNJ becomes a space and legacy Malayalam
-  chillu spellings remain distinct. Decoding returns native-normalized text.
-- The vocabulary is finite. Uncovered characters or emoji can produce `<unk>`;
-  alternate scripts and dialects are not fully validated.
-- Selecting a bundle selects a vocabulary, not an inference language lock.
-
-See the [native tokenizer guide](docs/native-unigram.md),
-[reproduction workflow](docs/native-reproduction.md), and
-[source provenance](THIRD_PARTY.md) for implementation and source details.
-
-Project code: [Apache-2.0](LICENSE). Tokenizer assets retain their [upstream terms](THIRD_PARTY.md).
+Project code: [Apache-2.0](LICENSE). Tokenizer assets retain their
+[upstream terms](THIRD_PARTY.md).

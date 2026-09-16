@@ -48,7 +48,7 @@ def test_native_build_exports_notices_outside_its_model_integrity_manifest(tmp_p
     assert load_tokenizer_bundle(output).source_native_to_target_native[:13087] == tuple(range(13087))
 
 
-@pytest.mark.parametrize("profile", ["full", "latin", "latin-indic"])
+@pytest.mark.parametrize("profile", ["original", "full", "latin", "latin-indic"])
 def test_direct_zip_adds_notices_to_old_bundles_without_modifying_source(tmp_path, profile):
     source = DATA / profile
     before = artifact_files(source)
@@ -78,7 +78,7 @@ def test_clean_and_package_preserve_additional_source_attribution(tmp_path):
     build_clean_bundles(source, clean)
     packaged = tmp_path / "packaged"
     receipt = package_tokenizer_bundles(source, packaged)
-    for profile in ("full", "latin", "latin-indic"):
+    for profile in ("original", "full", "latin", "latin-indic"):
         for directory in (clean / profile, packaged / profile):
             assert_notices(directory)
             assert artifact_files(directory) == artifact_files(DATA / profile)
@@ -162,10 +162,10 @@ build_native_tokenizer(source / 'base-tokenizer.model', source / 'selection.json
 build_clean_bundles(native, root / 'clean')
 package_tokenizer_bundles(root / 'clean/full', root / 'package', profiles=('full',))
 deterministic_bundle_zip(source, root / 'direct.zip')
-for directory in (native, root / 'clean/latin', root / 'clean/latin-indic', root / 'clean/full', root / 'package/full'):
+for directory in (native, root / 'clean/original', root / 'clean/latin', root / 'clean/latin-indic', root / 'clean/full', root / 'package/full'):
     for name, content in export_notice_files().items():
         assert (directory / name).read_bytes() == content
-for profile in ('latin', 'latin-indic', 'full'):
+for profile in ('original', 'latin', 'latin-indic', 'full'):
     expected = data.joinpath(profile)
     manifest = json.loads(expected.joinpath('manifest.json').read_text())
     for name in ('manifest.json', *manifest['files']):

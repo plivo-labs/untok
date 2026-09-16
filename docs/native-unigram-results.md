@@ -2,7 +2,7 @@
 
 This page records the September 7 v1 study. Its token IDs, normalization,
 corpus metrics and checkpoint evidence do not describe the current replacement
-v3 bundles. See [v3 preservation](native-preservation.md) and
+v4 bundles. See [current profile contracts](native-preservation.md) and
 [current language coverage](language-coverage.md) for the new artifacts.
 
 Build date: 7 September 2026. The candidate contains **20,550 native text IDs**

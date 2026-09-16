@@ -30,22 +30,22 @@ def main(argv=None):
     build.add_argument("--base", required=True, help="Original SentencePiece model from the native checkpoint")
     build.add_argument("--selection", required=True, help="Ordered, scored additions and native base SHA256")
     build.add_argument("--output", required=True, help="Empty directory for a separate native candidate bundle")
-    clean = commands.add_parser("clean", help="Rebuild append-only profiles with unchanged original Nemotron text IDs")
+    clean = commands.add_parser("clean", help="Rebuild original, Latin, Latin plus Indic and full tokenizer profiles")
     clean.set_defaults(operation="clean")
     clean.add_argument("--bundle", required=True, help="Original full bundle or a preserved bundle containing that source")
-    clean.add_argument("--output", required=True, help="New or empty directory for all three cleaned profiles")
+    clean.add_argument("--output", required=True, help="New or empty directory for all four tokenizer profiles")
     check = commands.add_parser(
         "check", aliases=["check-unigram"],
         help="Verify native bundle hashes, vocabulary and ID mapping on CPU",
     )
     check.set_defaults(operation="check")
     check.add_argument("--bundle", required=True)
-    package = commands.add_parser("package", help="Create Latin, Latin plus Indic and full Unigram bundles")
+    package = commands.add_parser("package", help="Export original, Latin, Latin plus Indic and full Unigram bundles")
     package.set_defaults(operation="package")
     package.add_argument("--bundle", required=True, help="Validated full native Unigram bundle")
     package.add_argument("--output", required=True, help="New destination for bundles and reproducible ZIPs")
-    package.add_argument("--profiles", nargs="+", choices=["latin", "latin-indic", "full"],
-                         default=["latin", "latin-indic", "full"])
+    package.add_argument("--profiles", nargs="+", choices=["original", "latin", "latin-indic", "full"],
+                         default=["original", "latin", "latin-indic", "full"])
     migrate = commands.add_parser("migrate", help="Create and verify a matching native NeMo checkpoint")
     migrate.set_defaults(operation="migrate")
     migrate.add_argument("--source", required=True, help="Pinned native base or original full Untok v1 .nemo checkpoint")

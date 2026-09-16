@@ -66,7 +66,7 @@ def receipt(candidate):
 
 def test_dispatch_preserves_original_native_identity_and_scopes_quality_to_additions(candidate):
     result = validate_native_tokenizer(*candidate)
-    assert result["algorithm"] == ALGORITHM and result["tokenizer_version"] == 3
+    assert result["algorithm"] == ALGORITHM and result["tokenizer_version"] == 4
     assert result["structural_passed"] and result["inventory_quality"]["passed"]
     assert result["corpus_status"] == "passed"
     assert result["corpora"]["ml"]["roundtrip_failures"] == 0
@@ -189,3 +189,65 @@ def test_validator_independently_rejects_original_native_mutations(candidate, mo
     monkeypatch.setattr(module, "CleanTokenizerAdapter", lambda _: adapter)
     with pytest.raises(ValueError, match="Native piece message|Native metadata"):
         module.validate_clean_tokenizer(*candidate)
+
+
+@pytest.mark.parametrize("profile,retained,added", [
+    ("original", 13087, 0), ("latin", 2653, 0), ("latin-indic", 3099, 7273),
+])
+def test_profile_validation_distinguishes_original_rows_from_additions(clean_bundle, tmp_path, profile, retained, added):
+    bundle = clean_bundle.parent / profile
+    manifest = json.loads((bundle / "manifest.json").read_text())
+    policy = tmp_path / "profile-policy.json"
+    write(policy, {"schema_version": 1, "base_tokenizer_sha256": manifest["base_tokenizer_sha256"],
+                   "tokenizer_sha256": manifest["tokenizer_sha256"], "normalizer_sha256": manifest["normalizer_sha256"],
+                   "profiles": {"en": {"script": "Latin", "characters": ["a", "b"]}}})
+    result = validate_native_tokenizer(bundle, policy)
+    assert result["structural_passed"] and result["inventory_quality"]["passed"]
+    assert result["inventory_quality"]["checked_piece_count"] == added
+    assert result["inherited_inventory_quality"]["checked_piece_count"] == retained
+    assert result["original_native_entries_preserved"] == retained
+    assert result["old_ID_compatibility"] == (profile == "original")
+    assert result["native_prefix"]["preserved"] == (profile == "original")
+    assert result["requires_retokenized_training_labels"] == (profile != "original")
+    assert result["public_pad_id"] == (13087 if profile == "original" else retained + added)
+    assert result["public_blank_id"] == result["public_pad_id"] + 1
+    if not added:
+        assert result["training_usage_status"] == "passed"
+        assert result["selection_quality_status"] == "passed"
+        assert not result["selection_quality"]["required_piece_witnesses"]
+        assert not result["selection_quality"]["canonical_required_text"]
+    assert result["corpus_status"] == "incomplete" and not result["passed"]
+
+
+@pytest.mark.parametrize("mutation", ["piece", "score", "type", "normalizer", "metadata", "mapping"])
+def test_compact_validation_independently_rejects_retained_row_and_metadata_mutations(clean_bundle, mutation):
+    from sentencepiece import sentencepiece_model_pb2 as pb
+    from untok.clean import CleanTokenizerAdapter
+    from untok.clean_validation import _retained_inventory
+
+    bundle = clean_bundle.parent / "latin"
+    adapter = CleanTokenizerAdapter(bundle)
+    manifest = json.loads((bundle / "manifest.json").read_text())
+    model = pb.ModelProto()
+    model.ParseFromString(adapter.model_bytes)
+    if mutation == "piece":
+        model.pieces[100].piece += "altered"
+    elif mutation == "score":
+        model.pieces[100].score -= 1
+    elif mutation == "type":
+        model.pieces[100].type = pb.ModelProto.SentencePiece.UNUSED
+    elif mutation == "normalizer":
+        model.normalizer_spec.add_dummy_prefix = not model.normalizer_spec.add_dummy_prefix
+    elif mutation == "metadata":
+        model.trainer_spec.model_prefix += "altered"
+    else:
+        forward = list(adapter.full_native_to_subset_native)
+        old = next(index for index, new in enumerate(forward) if new == 100)
+        forward[old] = None
+        adapter.full_native_to_subset_native = tuple(forward)
+        base_forward = list(adapter.source_native_to_target_native)
+        base_forward[old] = None
+        adapter.source_native_to_target_native = tuple(base_forward)
+    adapter.model_bytes = model.SerializeToString()
+    with pytest.raises(ValueError, match="Native piece message|Native metadata|source provenance"):
+        _retained_inventory(adapter, manifest)

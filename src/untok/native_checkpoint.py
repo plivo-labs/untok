@@ -183,7 +183,7 @@ def validate_source_native_tokenizer(model, base_bytes):
 def select_source_native_inventory(model, adapter):
     """Select an exact pinned inventory, never infer its IDs from tensor size.
 
-    The preserved v3 recipe carries both its original NVIDIA base and the complete
+    Versioned profile recipes carry both their original NVIDIA base and the complete
     v1 Untok model. A checkpoint trained against either can supply learned rows;
     unrelated, already-clean, and merely same-sized tokenizers are rejected.
     """
@@ -202,28 +202,79 @@ def select_source_native_inventory(model, adapter):
     raise ValueError("Restored source tokenizer is not a pinned original native base or supported full v1 inventory")
 
 
-def _prompt_registry(model_defaults, supplied=None):
-    from .prompts import TARGET_LOCALES, extend_prompt_registry
+def _prompt_registry(model_defaults, supplied=None, *, profile=None):
+    """Keep numeric source slots while selecting the target profile's names.
+
+    Indic identities are allocated before filtering, so deleting an unrelated
+    prompt name never makes its learned slot available for another language.
+    ``profile=None`` retains the historical all-source-plus-Indic contract.
+    """
+    from .prompts import TARGET_LOCALES, _read, _validate_dictionary, extend_prompt_registry
+    from .profile_policy import PROFILES, allowed_prompt_locales
 
     source = {"num_prompts": int(model_defaults.num_prompts),
               "prompt_dictionary": dict(model_defaults.prompt_dictionary)}
+    if profile is not None and profile not in PROFILES:
+        raise ValueError("Unknown tokenizer profile for prompt registry")
+    original = _validate_dictionary(source["prompt_dictionary"], source["num_prompts"])
+    registry = None if supplied is None else (dict(supplied) if isinstance(supplied, Mapping)
+                                               else json.loads(Path(supplied).read_text()))
+    if registry is not None and registry.get("profile", profile) != profile:
+        raise ValueError("Supplied prompt registry targets a different tokenizer profile")
     targets = [{"language": language} for language in sorted(TARGET_LOCALES)]
-    if supplied is None:
-        return extend_prompt_registry(source, targets)
-    registry = dict(supplied) if isinstance(supplied, Mapping) else json.loads(Path(supplied).read_text())
-    # Revalidate the complete manifest using the source's actual prompt slots.
-    checked = extend_prompt_registry(source, targets, previous_registry=registry)
-    if checked["prompt_dictionary"] != registry.get("prompt_dictionary"):
-        raise ValueError("Supplied prompt registry does not cover all target identities")
-    return registry
+    if profile in {"original", "latin"}:
+        _, source_hash = _read(source)
+        selected = allowed_prompt_locales(profile, original)
+        dictionary = {name: original[name] for name in sorted(selected)}
+        if registry is not None:
+            if (registry.get("schema_version") != 1 or registry.get("num_prompts") != source["num_prompts"]
+                    or registry.get("source_processor_sha256") != source_hash):
+                raise ValueError("Supplied prompt registry used a different pinned processor artifact")
+            if registry.get("prompt_dictionary") != dictionary:
+                raise ValueError("Supplied prompt registry changes retained slots or exceeds the tokenizer profile")
+        checked = {"schema_version": 1, "num_prompts": source["num_prompts"],
+                   "source_processor_sha256": source_hash, "previous_registry_sha256": None,
+                   "prompt_dictionary": dictionary, "identity_assignments": {}, "explicit_aliases": {},
+                   "target_assignments": [], "allocated_this_build": {},
+                   "existing_target_count": 0, "new_target_count": 0,
+                   "output_language_tags_added": False,
+                   "validation_boundary": "Prompt configuration only; no new language capability is asserted."}
+    else:
+        previous = registry
+        if registry is not None and profile == "latin-indic" and "profile" in registry:
+            # Restore omitted source names solely for the upstream allocation
+            # validator. Supplied retained names win so tampered slots fail.
+            previous = {**registry, "prompt_dictionary": {**original, **registry.get("prompt_dictionary", {})}}
+        checked = extend_prompt_registry(source, targets, previous_registry=previous)
+        if registry is not None:
+            expected_names = allowed_prompt_locales(profile, checked["prompt_dictionary"]) if profile else set(checked["prompt_dictionary"])
+            expected = {name: checked["prompt_dictionary"][name] for name in expected_names}
+            supplied_dictionary = registry.get("prompt_dictionary")
+            if (supplied_dictionary != checked["prompt_dictionary"]
+                    and not (profile == "latin-indic" and registry.get("profile") == profile
+                             and supplied_dictionary == expected)):
+                raise ValueError("Supplied prompt registry does not cover all target identities")
+        if profile in {None, "full"}:
+            return checked if registry is None else registry
+        selected = allowed_prompt_locales(profile, checked["prompt_dictionary"])
+        checked["prompt_dictionary"] = {name: checked["prompt_dictionary"][name] for name in sorted(selected)}
+    retained_source = set(original) & set(checked["prompt_dictionary"])
+    reserved_slots = set(original.values()) | set(checked["prompt_dictionary"].values())
+    checked.update(profile=profile,
+                   excluded_upstream_prompt_names=sorted(set(original) - retained_source),
+                   upstream_entries_preserved=len(retained_source),
+                   upstream_slots_preserved=len({original[name] for name in retained_source}),
+                   reserved_source_prompt_slots=sorted(set(original.values())),
+                   unused_prompt_slots=[i for i in range(source["num_prompts"]) if i not in reserved_slots])
+    return checked
 
 
 def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256, seed=0,
                               prompt_registry=None, max_new_mass_ratio=1e-6):
     """Migrate a pinned .nemo into a full, reduced, or clean native bundle.
 
-    Preserved v3 accepts the original NVIDIA base or its exact full Untok v1
-    tokenizer. Reduced and clean bundles intentionally omit selected rows. The
+    Versioned profiles accept the original NVIDIA base or its exact full Untok v1
+    tokenizer. Compact profiles intentionally omit selected rows. The
     acoustic network and every retained row remain byte-equal, while changed
     labels, softmaxes and speech accuracy still require separate checks.
     """
@@ -258,11 +309,13 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
     if type(original) not in {EncDecRNNTBPEModelWithPrompt, native_class}:
         raise ValueError("Unsupported source model class for native migration")
     source_inventory, source_to_target, source_tokenizer_check = select_source_native_inventory(original, adapter)
+    requires_retokenized_labels = requires_retokenized_labels or any(value is None for value in source_to_target[:-1])
     old_layout = inspect_nemo_layout(original)
     if old_layout.output_size != len(source_to_target):
         raise ValueError("Source acoustic vocabulary disagrees with the selected pinned tokenizer inventory")
     cfg = OmegaConf.create(OmegaConf.to_container(original.cfg, resolve=True))
-    registry = _prompt_registry(cfg.model_defaults, prompt_registry)
+    registry = _prompt_registry(cfg.model_defaults, prompt_registry,
+                                profile=adapter.profile if bundle_manifest.get("tokenizer_version") == 4 else None)
     with open_dict(cfg):
         cfg.tokenizer = tokenizer_cfg
         cfg.target = "untok.native_runtime.NativeNemotronRNNTModel"
@@ -346,7 +399,10 @@ def migrate_native_checkpoint(source, bundle, output, *, expected_source_sha256,
                   "logit_parity_evaluated": False,
                   "remaining_gates": (["retokenize_training_labels"] if requires_retokenized_labels else [])
                                      + ["training_forward_backward", "retained_logit_and_audio_controls",
-                                        "unmasked_audio_regression", "new_language_fine_tuning_and_evaluation"]}
+                                        "unmasked_audio_regression"]
+                                     + ([] if bundle_manifest.get("tokenizer_version") == 4
+                                        and adapter.profile in {"original", "latin"}
+                                        else ["new_language_fine_tuning_and_evaluation"])}
         staged_report = Path(staging) / report_path.name
         staged_report.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n")
         os.link(staged, output)

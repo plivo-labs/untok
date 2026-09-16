@@ -1,47 +1,69 @@
-# V3 native checkpoint migration
+# V4 checkpoint compatibility and migration
 
-All three packaged profiles preserve all 13,087 original Nemotron text IDs,
-complete piece messages and normalization metadata. The acoustic blank moves
-from 13087 to the expanded vocabulary's final output row; migration copies its
-learned weights exactly. Existing original text labels retain their meaning.
-Regenerate labels to use new segmentation. The earlier compact v2 candidate is
-withdrawn and must not be used for the original-ID requirement.
+Choose a checkpoint whose tokenizer matches the selected profile:
 
-All three v3 checkpoints were migrated from the pinned original NVIDIA checkpoint
-and verified through real NeMo save/reload on 16 September 2026. Each preserved all
-638,030,384 original learned values across 657 tensors with exact equality, before
-save and after reload. No original text row was removed or renumbered.
-[Migration results and checkpoint hashes](../configs/native-checkpoint-v3-results.json)
-record the runtime, bundle identities and complete receipt hashes.
+| Profile | Compatibility with original Nemotron |
+| --- | --- |
+| `original` | Exact original tokenizer bytes and text IDs; use the original checkpoint |
+| `latin` | Compact Latin subset; retained rows require remapping and excluded rows are removed |
+| `latin-indic` | Compact Latin-plus-Indic vocabulary; retained rows require remapping and added rows need training |
+| `full` | Original text IDs remain fixed; added Indic/shared rows expand the vocabulary |
 
-| Local checkpoint | Original text IDs | Acoustic blank migration |
-| --- | --- | --- |
-| `artifacts/native-checkpoints-v3/full.nemo` | `0..13086` unchanged | `13087` → `20784` |
-| `artifacts/native-checkpoints-v3/latin-indic.nemo` | `0..13086` unchanged | `13087` → `20784` |
-| `artifacts/native-checkpoints-v3/latin.nemo` | `0..13086` unchanged | `13087` → `13573` |
+The native text vocabulary sizes and acoustic blank IDs are 13,087 (`original`),
+2,653 (`latin`), 10,372 (`latin-indic`) and 20,360 (`full`).
 
-Checkpoints and their full `.migration.json` receipts are local generated artifacts,
-outside Git and the Python package. This verification used CPU execution with the
-pinned NeMo source revision below, Python 3.12.14, PyTorch 2.8.0 and SentencePiece 0.2.1.
-Paired acoustic validation and training have not been run for v3.
-[Published speech compatibility results](native-compatibility-results.md) apply
-to v1, whose migration also moved blank to its final output row.
+Every profile uses the original SentencePiece normalizer. The native acoustic
+blank is the final row at the selected text vocabulary size. Migration copies
+the source blank weights to that row. An unchanged original text ID does not
+imply unchanged segmentation or predictions after extending the vocabulary.
+For subsets, old token arrays need an explicit row map or retokenization from
+original text; removed labels cannot be fixed by substituting another numeric ID.
 
 Migration accepts the pinned original native `.nemo` checkpoint from
 `nvidia/nemotron-3.5-asr-streaming-0.6b`, revision
-`1c8deaecc64b91f034d73e08dd8b64625eb3395d`.
-
-Expected checkpoint SHA256:
+`1c8deaecc64b91f034d73e08dd8b64625eb3395d`, with SHA256
 `210214ed94039bf6bfbb9a047c7fa289628db75b103e2bf6381fa78285436a74`.
-The embedded SentencePiece model is Unigram. NeMo's class names use `BPE`
-for this SentencePiece integration, but that does not determine the model's
-actual segmentation algorithm.
+The embedded model is Unigram; NeMo's use of `BPE` in its SentencePiece integration
+class names does not change that algorithm.
 
-It also accepts a checkpoint containing the exact original **full v1** Untok
-tokenizer, after verifying the supplied checkpoint SHA-256 and embedded
-tokenizer bytes. Migration from a v1 reduced Latin or Latin-plus-Indic
-checkpoint is not supported. An original-base migration and a full-v1 migration
-use different source row maps; they cannot share an assumed numeric ID layout.
+A source checkpoint containing the exact historical **full v1** tokenizer is
+also supported after its checkpoint hash and embedded tokenizer are verified.
+Original-base and full-v1 migration use different row maps. Migration from a
+historical reduced Latin or Latin-plus-Indic checkpoint is not supported.
+
+## Current migration evidence
+
+All four v4 checkpoints passed real NeMo construction, save and reload on
+16 September 2026. Exact retained-tensor comparisons passed across 657 tensors,
+both before save and after reload; new-row initialization and tokenizer identity
+also passed. `original` remains byte-identical to the original tokenizer.
+
+| Profile | Original text rows retained | Source text rows omitted | New text rows initialized | Native blank |
+| --- | ---: | ---: | ---: | ---: |
+| `original` | 13,087 | 0 | 0 | 13,087 |
+| `latin` | 2,653 | 10,434 | 0 | 2,653 |
+| `latin-indic` | 3,099 | 9,988 | 7,273 | 10,372 |
+| `full` | 13,087 | 0 | 7,273 | 20,360 |
+
+`original` and `full` preserve all 638,030,384 original learned values. Subsets
+intentionally omit excluded text rows and verify every retained value exactly.
+Each native blank is the final output row; `original` keeps index 13087 unchanged.
+The [v4 results](../configs/native-checkpoint-v4-results.json) record checkpoint,
+model, bundle and receipt hashes, plus the pinned CPU NeMo runtime. Generated
+checkpoints and complete receipts are local artifacts under
+`artifacts/native-checkpoints-v4/`, outside Git. This run did not evaluate speech
+accuracy, a training forward pass or logit parity.
+
+## Historical evidence
+
+The [v3 migration report](../configs/native-checkpoint-v3-results.json) records
+real NeMo save/reload verification of the superseded v3 models. Those models
+retained the entire original bank in every profile; they are not the v4 subsets.
+The [v1 speech results](native-compatibility-results.md) are historical as well.
+Neither report qualifies a newly built v4 artifact. A current migration's
+`.migration.json` receipt must bind its exact source, target model and bundle
+hashes before it is treated as verified. Speech accuracy and training require
+separate evaluation.
 
 ## Migrate
 
@@ -67,7 +89,8 @@ untok migrate \
   --output nemotron-latin-indic.nemo
 ```
 
-Choose `full` or `latin` in the path command to migrate the other bundles. The destination
+Choose `full` or `latin` in the path command to migrate those bundles.
+`original` can use the pinned original checkpoint directly. The destination
 and migration report must not exist. The source checkpoint is never overwritten.
 
 Migration verifies the source hash, actual native tokenizer bytes, every
@@ -146,17 +169,17 @@ Shared pieces must not be assigned exclusively to one language.
 
 ## What is preserved
 
-Every v3 profile retains all original text rows at their original indices.
-Migration copies those rows and relocates the original blank row. For a full-v1
-source, added rows outside the selected extension profile may be omitted; no
-original Nemotron text row may be omitted. The exact original model metadata and
-normalizer are verified. Retained raw logits can stay equal while adding output
-classes changes softmax probabilities or unrestricted predictions.
+`full` retains every original text row at its original index. The two subsets
+retain only selected rows and use their explicit compact mappings. Migration
+verifies retained tensor values exactly and relocates the learned acoustic blank.
+For a full-v1 source, only surviving source additions keep their learned rows.
+The unchanged source normalizer is verified for every profile.
 
-Full and Latin-plus-Indic contain 20,784 text entries; Latin contains 13,573.
-The native acoustic blank is respectively 20,784 or 13,573. The public pad and
-blank IDs remain 13,087 and 13,088; use the supplied mapping rather than passing
-public IDs directly as native training labels.
+Native text IDs are dense `0..N-1`, and native acoustic blank is `N`. `original`
+and `full` retain public pad/blank IDs 13087/13088. The compact subsets use public
+pad `N` and public blank `N+1`. Use each bundle's supplied public/native map.
+Retained logits may match while removed or added classes change softmax
+probabilities and unrestricted predictions.
 
 New output weights initially copy the original blank row with a lower bias.
 The combined new-output mass is bounded relative to retained old outputs by
@@ -179,9 +202,9 @@ symbol marks a word boundary.
 | Tokenizer | Pieces |
 | --- | --- |
 | Original | `▁`, `भा`, `र`, `त` |
-| V3 full or Latin plus Indic | `▁भारत` |
+| V4 full or Latin plus Indic | `▁भारत` |
 
-The v3 text tokenizer can select `▁भारत` immediately. When migrating from
+The expanded v4 text tokenizer can select `▁भारत` immediately. When migrating from
 the original NVIDIA checkpoint, that new output row has no learned acoustic
 association with the word yet. Under
 the current initialization, new rows have the blank row's weights and a lower
@@ -193,30 +216,30 @@ not teach it the word's acoustic meaning.
 To learn meaningful use of the new pieces, a future checkpoint fine-tuning
 step would use speech transcripts encoded by the updated tokenizer. This
 teaches the new predictor and output rows; it is not another tokenizer change.
-Every profile retains all original Hindi pieces and other original scripts.
-Full and Latin-plus-Indic add the selected Indic bank; Latin filters only new
-additions. A full-v1 source may already have trained rows for surviving additions. Passing
+`original` and `full` retain the entire original multilingual bank.
+Latin-plus-Indic retains the permitted Indic pieces; Latin excludes Indic scripts.
+Full and Latin-plus-Indic add the selected Indic bank. A full-v1 source may already have trained rows for surviving additions. Passing
 compatibility checks establishes preservation on the tested inputs, not that
 the new pieces have been learned.
 
-## Speech integration checks still required for v3
+## Speech integration checks for current artifacts
 
-`scripts/native_checkpoint_probe.py` contains full-source-preservation controls.
-Original-base to v3 mappings retain every source row, so that path is applicable.
-`scripts/native_subset_probe.py` also accepts these identity-prefix mappings
-and historical reduced layouts. Its source checks bind the actual original-base
-or full-v1 tokenizer and row map to the migration receipt.
+`scripts/native_checkpoint_probe.py` contains controls that require all source
+rows to survive. It is appropriate only for mappings with that property.
+`scripts/native_subset_probe.py` supports retained-output comparisons for compact
+subsets as well as full-source-preserving layouts. Source checks bind the actual
+original-base or full-v1 tokenizer and row map to the migration receipt.
 
 `inference` exercises explicit target prompts and reports raw diagnostic WER/CER.
 Its success flag means inference executed, not that recognition accuracy passed.
 Small samples and regional proxy recordings do not establish all-locale accuracy.
 
 `scripts/native_subset_probe.py` provides the retained-output comparison path
-for all three v3 profiles, including full. It selects the original
+for the current derived profiles, including full. It selects the original
 NVIDIA or full-v1 source inventory from exact tokenizer bytes and verifies that
 the migration receipt declares the same source hash and row mapping. It requires
 a completed migration receipt and immutable audio hashes. This is a command for
-a new v3 run, not an already-passed result:
+a fresh current-artifact run, not historical passing evidence:
 
 ```sh
 python scripts/native_subset_probe.py --mode both \
@@ -232,8 +255,8 @@ The manifest should include the desired locale paths and immutable audio hashes.
 Removed output rows can change unrestricted predictions even when every
 retained row was copied exactly. For a full-v1 migration, supply the same full-v1
 source checkpoint used during migration. Source selection and receipt checks
-have CPU tests for both source inventories and all three profiles; no actual v3
-paired audio run has been completed.
+must bind the actual source inventory and current profile. A passing historical
+run does not establish paired audio behavior for the v4 subsets.
 
 ## Work required for a trained release
 

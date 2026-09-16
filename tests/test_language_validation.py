@@ -32,7 +32,7 @@ def corpus(tmp_path):
     write(policy, {"schema_version": 1, "fleurs_revision": "a" * 40, "records_per_language": 2,
                    "scope": "test text diagnostics", "profiles": {
         "en": {"name": "English", "source_kind": "fleurs_dev", "fleurs_config": "en_us",
-               "source_sha256": sha(data), "selected_sha256": selected_sha(data), "expected_bundles": ["latin", "latin-indic", "full"]}}})
+               "source_sha256": sha(data), "selected_sha256": selected_sha(data), "expected_bundles": ["original", "latin", "latin-indic", "full"]}}})
     return policy, cache, tmp_path / "prepared", data
 
 
@@ -65,14 +65,14 @@ def test_prepared_data_is_immutable_and_does_not_need_network(corpus, monkeypatc
         prepare_fleurs_corpus(policy, cache, output, download=False)
 
 
-def test_evaluation_reports_three_bundles_without_transcript_leakage(corpus):
+def test_evaluation_reports_four_bundles_without_transcript_leakage(corpus):
     policy, cache, output, _ = corpus
     prepare_fleurs_corpus(policy, cache, output, download=False)
     report = validate_language_coverage(policy, output / "manifest.json")
     assert report["status"] == "passed_on_supplied_text"
     evidence = report["languages"]["en"]["evidence"]
     assert len(evidence) == 2  # Two text forms, not independent corpora.
-    assert set(evidence[0]["bundle_metrics"]) == {"latin", "latin-indic", "full"}
+    assert set(evidence[0]["bundle_metrics"]) == {"original", "latin", "latin-indic", "full"}
     for item in evidence:
         for metrics in item["bundle_metrics"].values():
             assert metrics["records"] == metrics["roundtrip_checked"] == 2
@@ -128,3 +128,16 @@ def test_packaged_policy_separates_inherited_and_original_indic_evidence():
     assert sum(p["source_kind"] == "fleurs_dev" for p in policy["profiles"].values()) == 34
     assert sum(p["source_kind"] == "frozen_indic" for p in policy["profiles"].values()) == 22
     assert any("Nynorsk" in text for text in policy["profiles"]["no"]["limitations"])
+
+
+def test_v4_policy_keeps_historical_samples_and_separates_original_scope():
+    root = Path(__file__).parents[1] / "configs"
+    old = json.loads((root / "language-coverage.json").read_text())
+    current = json.loads((root / "language-coverage-v4.json").read_text())
+    assert current["tokenizer_version"] == 4
+    assert set(current["profile_contracts"]) == {"original", "latin", "latin-indic", "full"}
+    assert set(current["profiles"]) == set(old["profiles"])
+    for language, spec in current["profiles"].items():
+        for key in ("source_kind", "source_sha256", "selected_sha256", "fleurs_config"):
+            assert spec.get(key) == old["profiles"][language].get(key)
+        assert ("original" in spec["expected_bundles"]) == (spec["source_kind"] == "fleurs_dev" or language == "hi")

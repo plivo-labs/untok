@@ -23,7 +23,7 @@ def _load_tokenizer_directory(directory: str | Path):
     """Load a verified full native bundle or a separately validated subset."""
     directory = Path(directory)
     manifest = json.loads((directory / "manifest.json").read_text(encoding="utf-8"))
-    if manifest.get("algorithm") == "native_sentencepiece_unigram_preserved_v3":
+    if manifest.get("algorithm") in {"native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4"}:
         from .clean import CleanTokenizerAdapter
 
         return CleanTokenizerAdapter(directory)
@@ -39,13 +39,13 @@ def _load_tokenizer_directory(directory: str | Path):
     return adapter
 
 
-PROFILES = ("latin", "latin-indic", "full")
+PROFILES = ("original", "latin", "latin-indic", "full")
 
 
 def load_tokenizer_bundle(directory: str | Path):
     """Load a bundled profile name or an explicit local bundle directory.
 
-    The strings ``latin``, ``latin-indic`` and ``full`` select installed package
+    The strings ``original``, ``latin``, ``latin-indic`` and ``full`` select installed package
     data. Use ``Path("full")`` or ``"./full"`` for a same-named local directory.
     Every path uses the same strict artifact and metadata checks.
     """
@@ -94,7 +94,7 @@ def character_allowed(character: str, profile: str) -> bool:
         raise ValueError(f"Unknown tokenizer profile: {profile}")
     if len(character) != 1:
         raise ValueError("Expected one Unicode character")
-    if profile == "full":
+    if profile in {"original", "full"}:
         return True
     codepoint = ord(character)
     index = bisect.bisect_right(_STARTS[profile], codepoint) - 1
@@ -304,7 +304,7 @@ def deterministic_bundle_zip(directory: str | Path, archive: str | Path) -> str:
 
 def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
                               profiles: Sequence[str] = PROFILES, *, make_zips: bool = True) -> dict[str, Any]:
-    """Package full, Latin, and Latin+Indic bundles without fitting any scores.
+    """Package original, Latin, Latin+Indic and full bundles without score fitting.
 
     Existing destinations must be empty. Every candidate and ID map is checked
     before publishing the output directory. Original files are never modified.
@@ -312,7 +312,7 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
     bundle, output = Path(bundle).resolve(), Path(output).resolve()
     profiles = tuple(profiles)
     if not profiles or len(profiles) != len(set(profiles)) or any(p not in PROFILES for p in profiles):
-        raise ValueError("Choose unique profiles from latin, latin-indic and full")
+        raise ValueError("Choose unique profiles from original, latin, latin-indic and full")
     if output == bundle or output.is_relative_to(bundle) or bundle.is_relative_to(output):
         raise ValueError("Output and source bundle directories must not overlap")
     if output.exists() and (not output.is_dir() or any(output.iterdir())):
@@ -320,21 +320,22 @@ def package_tokenizer_bundles(bundle: str | Path, output: str | Path,
     adapter = load_tokenizer_bundle(bundle)
     source_manifest_bytes = (bundle / "manifest.json").read_bytes()
     source_manifest = json.loads(source_manifest_bytes)
-    clean_source = source_manifest.get("algorithm") == "native_sentencepiece_unigram_preserved_v3"
+    clean_source = source_manifest.get("algorithm") in {"native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4"}
     if not clean_source and source_manifest.get("algorithm") != "native_sentencepiece_unigram":
-        raise ValueError("Packaging requires an original full bundle or a preserved v3 bundle")
+        raise ValueError("Packaging requires a source, v3 or v4 native bundle")
     names = sorted(set(source_manifest["files"]) | {"manifest.json"})
     if any((bundle / name).is_symlink() for name in names):
         raise ValueError("Source bundle files must not be symlinks")
     source_files = {name: (bundle / name).read_bytes() for name in names}
     notices = source_notice_files(bundle)
     base_bytes, full_bytes = source_files["base-tokenizer.model"], source_files["tokenizer.model"]
+    pinned_source = source_manifest.get("tokenizer_sha256") == "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8"
     prepared = {}
     for profile in profiles:
-        if clean_source:
+        if clean_source or pinned_source or profile == "original":
             from .clean import _artifacts
 
-            files, manifest, _, _ = _artifacts(base_bytes, adapter.full_model_bytes, profile)
+            files, manifest, _, _ = _artifacts(base_bytes, adapter.full_model_bytes if clean_source else full_bytes, profile)
             prepared[profile] = ({**files, "manifest.json": _json_bytes(manifest)}, manifest)
         elif profile == "full":
             prepared[profile] = (source_files, source_manifest)

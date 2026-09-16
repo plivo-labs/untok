@@ -88,7 +88,9 @@ def validate_native_prefix(base_bytes: bytes, expanded_bytes: bytes) -> dict[str
     right.trainer_spec.ClearField("vocab_size")
     if left.SerializeToString() != right.SerializeToString():
         raise ValueError("Native metadata or normalization behavior changed")
-    if expanded.trainer_spec.vocab_size != len(expanded.pieces):
+    # NVIDIA's exact base contains merged vocabularies but retains the first
+    # trainer's historical vocab_size. An unmodified copy must keep that field.
+    if expanded_bytes != base_bytes and expanded.trainer_spec.vocab_size != len(expanded.pieces):
         raise ValueError("Expanded vocabulary length disagrees with its trainer spec")
     scores = [p.score for p in base.pieces if p.type == pb.ModelProto.SentencePiece.NORMAL]
     low, high = min(scores), max(scores)

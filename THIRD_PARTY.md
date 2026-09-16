@@ -26,7 +26,7 @@ project does not assert NVIDIA, AI4Bharat or Meta endorsement.
 | Additional Urdu transcripts | [UrduSpeech](https://huggingface.co/datasets/ASLP-lab/UrduSpeech/tree/16dd380cfd9049a3db7f06a98e878086916bf833), publisher-declared CC-BY-4.0 |
 | Additional SPRING R1 transcripts | [Primary author release](https://github.com/Speech-Lab-IITM/SPRING_INX_ESPnet_Recipe/blob/6e30c6ab949211bb573ac9bc034f61eb5114db28/README.md) describes the original audio and manually transcribed text as public domain; the recipe's MIT license is not treated as the data license |
 
-The Python package includes the three native tokenizer bundles and these
+The Python package includes the four native tokenizer bundles and these
 upstream license and attribution texts:
 
 - [OpenMDW 1.1](licenses/OpenMDW-1.1.txt), from the [agreement linked by NVIDIA](https://openmdw.ai/license/1-1/).
@@ -34,10 +34,13 @@ upstream license and attribution texts:
 - [Meta notice](licenses/Meta-notice.txt), from [Omnilingual ASR](https://github.com/facebookresearch/omnilingual-asr/blob/81f51e224ce9e74b02cc2a3eaf21b2d91d743455/LICENSE), and the [Apache 2.0 license](licenses/Apache-2.0.txt).
 - [Unicode License V3](licenses/Unicode-3.0.txt), from [Unicode](https://www.unicode.org/license.txt).
 
-All v3 bundles extend NVIDIA's original tokenizer while preserving its complete
-13,087-entry prefix, original IDs, scores, types and normalizer. Profiles filter
-additions only; none is an unmodified upstream release. The source code's Apache
-license does not replace the terms for the derived model/data materials.
+The `original` profile contains a byte-identical copy of NVIDIA's embedded
+13,087-entry SentencePiece tokenizer, accompanied by Untok's wrapper metadata.
+The `full` profile preserves that original prefix and adds the selected Indic
+vocabulary. The `latin` and `latin-indic` profiles are derived script subsets
+with compact IDs and explicit source row maps. All retain the original
+SentencePiece normalizer. The source code's Apache license does not replace
+the terms for these model/data materials.
 
 The NVIDIA-derived tokenizer materials remain subject to OpenMDW 1.1.
 Redistributions must include that agreement and applicable original copyright
@@ -52,8 +55,9 @@ workspace prefix. Source content hashes, piece selections, scores and tokenizer
 models are unchanged; the metadata has its own updated integrity hash.
 
 No acoustic checkpoint weights or third-party corpus text are included here.
-The selected 190-character list is a finite repertoire; it is not universal
-Unicode fallback. The IndicConformer donor normalizers are not imported into
+The historical selected 190-character Latin inventory remains in the source
+study metadata but is not imported as added vocabulary in the current profiles.
+No universal Unicode fallback is provided. The IndicConformer donor normalizers are not imported into
 the final tokenizer. The BPE variant retains the published JSON normalizer;
 the native Unigram variant retains the embedded SentencePiece normalizer.
 
@@ -63,7 +67,7 @@ is not included in tokenizer bundles. Vaani was downloaded for inspection
 but excluded from native fitting because its lexical extraction policy is
 unresolved. IN22-Conv was unavailable to the supplied account and is excluded.
 
-Native bundle extension profiles use the generated Unicode 17.0.0 table in
+Native script subset profiles use the generated Unicode 17.0.0 table in
 `src/untok/_bundle_script_ranges.py`. The table includes the Unicode License V3
 notice and ships as a Python module with the wheel. Regenerate it with
 `scripts/generate_bundle_script_ranges.py`; its inputs must match these hashes:

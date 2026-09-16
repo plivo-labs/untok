@@ -466,7 +466,9 @@ def validate_native_tokenizer(
     if phase not in {"dev", "reserve"} or isinstance(max_examples, bool) or not isinstance(max_examples, int) or max_examples < 0:
         raise ValueError("Use phase dev/reserve and a nonnegative integer max_examples")
     bundle, policy_file = Path(bundle_path), Path(policy_path)
-    if _json(bundle / "manifest.json").get("algorithm") == "native_sentencepiece_unigram_preserved_v3":
+    if _json(bundle / "manifest.json").get("algorithm") in {
+        "native_sentencepiece_unigram_preserved_v3", "native_sentencepiece_unigram_profiles_v4",
+    }:
         from .clean_validation import validate_clean_tokenizer
 
         return validate_clean_tokenizer(bundle, policy_file, corpus_manifest_path, phase=phase,

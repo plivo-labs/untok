@@ -97,7 +97,8 @@ def test_subset_scope_selection_and_missing_audio_failures(probes):
     records = [{"id": f"{lang}-{seconds}", "language": lang, "duration": seconds, "target_lang": lang + "-XX"}
                for lang in ("en", "fr", "hi", "ta", "ar", "ru") for seconds in (12, 8)]
     assert [row["id"] for row in subset.choose_rows(records, "latin")] == ["en-8", "fr-8"]
-    assert [row["id"] for row in subset.choose_rows(records, "latin-indic")] == ["ar-8", "en-8", "fr-8", "hi-8", "ta-8"]
+    assert [row["id"] for row in subset.choose_rows(records, "latin-indic")] == ["en-8", "fr-8", "hi-8", "ta-8"]
+    assert [row["id"] for row in subset.choose_rows(records, "original")] == ["ar-8", "en-8", "fr-8", "hi-8", "ru-8"]
     with pytest.raises(ValueError, match="outside"):
         subset.choose_rows(records, "latin", ["hi"])
     with pytest.raises(ValueError, match="Missing"):
@@ -119,11 +120,11 @@ def test_subset_preserves_all_retained_source_regional_prompt_paths(probes):
                for locale in locales for seconds in (9, 6)]
     latin = subset.choose_rows(records, "latin")
     indic = subset.choose_rows(records, "latin-indic")
-    assert len(latin) == 29 and len(indic) == 52
+    assert len(latin) == 29 and len(indic) == 51
     assert {row["target_lang"] for row in latin if row["language"] == "en"} == {"en-US", "en-GB"}
     assert {row["target_lang"] for row in latin if row["language"] == "nb"} == {"nb-NO", "nn-NO"}
     assert all(row["duration"] == 6 for row in latin + indic)
-    assert "ar-AR" in {row["target_lang"] for row in indic}
+    assert "ar-AR" not in {row["target_lang"] for row in indic}
     assert {row["target_lang"] for row in subset.choose_rows(records, "latin", ["en"])} == {"en-US", "en-GB"}
 
 
@@ -140,6 +141,21 @@ def test_subset_control_uses_same_original_prompt_or_explicit_auto(probes):
         subset.control_prompt({"target_lang": "ta"}, old, {**new, "auto": 9})
     with pytest.raises(ValueError, match="missing"):
         subset.control_prompt({"target_lang": "kn"}, old, new)
+
+
+def test_subset_configuration_can_remove_prompt_names_but_cannot_change_slots():
+    from untok.checkpoint_validation import _equivalent_inference_config
+
+    original = SimpleNamespace(cfg={"decoding": {"strategy": "greedy_batch"},
+        "model_defaults": {"num_prompts": 4, "prompt_dictionary": {"auto": 0, "en-US": 1, "ar-AR": 2}}})
+    target = copy.deepcopy(original)
+    del target.cfg["model_defaults"]["prompt_dictionary"]["ar-AR"]
+    with pytest.raises(ValueError, match="prompt identities"):
+        _equivalent_inference_config(original, target, "greedy_batch")
+    assert _equivalent_inference_config(original, target, "greedy_batch", allow_removed_prompts=True)
+    target.cfg["model_defaults"]["prompt_dictionary"]["en-US"] = 2
+    with pytest.raises(ValueError, match="prompt identities"):
+        _equivalent_inference_config(original, target, "greedy_batch", allow_removed_prompts=True)
 
 
 def test_subset_hypothesis_mapping_rejects_pruned_source_rows(probes):
@@ -205,13 +221,21 @@ def test_subset_actual_head_capture_and_retained_state_replay(probes):
 
 @pytest.fixture(scope="module")
 def compact_probe_bundles(tmp_path_factory):
-    from untok.bundles import PROFILES, load_tokenizer_bundle, package_tokenizer_bundles
+    from untok.bundles import PROFILES, _subset_artifacts, load_tokenizer_bundle
     from untok.clean import build_clean_bundles
 
     data = Path(__file__).resolve().parents[1] / "src" / "untok" / "data"
     output = tmp_path_factory.mktemp("compact-probe-bundles")
     build_clean_bundles(data / "source", output / "clean")
-    package_tokenizer_bundles(data / "source", output / "legacy", profiles=["latin"], make_zips=False)
+    # Public packaging now creates v4 profiles. Build the frozen v1 subset
+    # explicitly to continue checking historical receipt compatibility.
+    source = load_tokenizer_bundle(data / "source")
+    legacy = output / "legacy" / "latin"
+    legacy.mkdir(parents=True)
+    files, manifest, _, _ = _subset_artifacts(source.base_model_bytes, source.model_bytes, "latin")
+    for name, raw in files.items():
+        (legacy / name).write_bytes(raw)
+    (legacy / "manifest.json").write_text(json.dumps(manifest))
     return ({profile: load_tokenizer_bundle(output / "clean" / profile) for profile in PROFILES},
             load_tokenizer_bundle(output / "legacy" / "latin"))
 
@@ -227,7 +251,7 @@ def _native_source(raw):
     ))
 
 
-@pytest.mark.parametrize("profile", ["full", "latin-indic", "latin"])
+@pytest.mark.parametrize("profile", ["original", "full", "latin-indic", "latin"])
 @pytest.mark.parametrize("inventory", ["original_native_base", "original_untok_full_v1"])
 def test_compact_probe_selects_the_exact_migrated_source_map(probes, compact_probe_bundles, profile, inventory):
     _, subset = probes
@@ -239,18 +263,18 @@ def test_compact_probe_selects_the_exact_migrated_source_map(probes, compact_pro
     report = {
         "source_inventory": inventory, "source_tokenizer_sha256": subset.sha_bytes(raw),
         "source_remapping": "source_native_to_target_native" if is_base else "full_native_to_subset_native",
-        "old_model_to_new_model": list(expected), "requires_retokenized_training_labels": True,
+        "old_model_to_new_model": list(expected), "requires_retokenized_training_labels": profile != "original" or not is_base,
     }
     actual, evidence = subset.select_probe_inventory(_native_source(raw), target, report)
     assert actual == expected and actual[-1] == target.blank_id
-    if is_base or profile != "latin":
+    if is_base and profile in {"original", "full"}:
         assert actual[:-1] == tuple(range(len(actual) - 1))
     else:
         assert any(index is None for index in actual)
     assert evidence["source_inventory"] == inventory
     assert evidence["source_tokenizer_sha256"] == subset.sha_bytes(raw)
     assert evidence["source_native_check"]["piece_ids_checked"] == len(actual) - 1
-    assert evidence["requires_retokenized_training_labels"]
+    assert evidence["requires_retokenized_training_labels"] == (profile != "original" or not is_base)
     wrong = dict(report, old_model_to_new_model=list(
         target.full_native_to_subset_native if is_base else target.source_native_to_target_native))
     with pytest.raises(ValueError, match="source mapping"):
