@@ -13,7 +13,7 @@ def test_check_reports_native_ids(capsys):
     assert result["active_vocabulary_size"] == 10372
 
 
-def test_migration_requires_hash_and_forwards_native_settings(monkeypatch, capsys):
+def test_migration_requires_hash_and_forwards_initialization_settings(monkeypatch, capsys):
     import untok.native_checkpoint as native
     calls = []
     monkeypatch.setattr(native, "migrate_native_checkpoint", lambda *a, **k: calls.append((a, k)) or {"ok": True})
@@ -21,11 +21,9 @@ def test_migration_requires_hash_and_forwards_native_settings(monkeypatch, capsy
     with pytest.raises(SystemExit):
         main(argv)
     capsys.readouterr()
-    assert main([*argv, "--source-sha256", "a" * 64, "--model-config", "model.yaml",
-                 "--training-template", "native.yaml", "--training-overrides", "recipe.yaml"]) == 0
+    assert main([*argv, "--source-sha256", "a" * 64]) == 0
     assert calls == [(("source.nemo", "latin-indic", "target.nemo"), {
-        "expected_source_sha256": "a" * 64, "seed": 0, "max_new_mass_ratio": .05,
-        "model_config": "model.yaml", "training_template": "native.yaml", "training_overrides": "recipe.yaml"})]
+        "expected_source_sha256": "a" * 64, "seed": 0, "max_new_mass_ratio": .05})]
 
 
 @pytest.mark.parametrize("command", ["build", "clean", "package", "validate", "check-unigram"])

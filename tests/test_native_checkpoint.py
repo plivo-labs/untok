@@ -15,7 +15,6 @@ from untok.native_checkpoint import (
     validate_source_native_tokenizer, verify_native_state_transfer,
 )
 from untok.native_donors import initialize_text_donor_rows
-from untok.native_runtime import install_native_output_mask
 
 
 def toy_model(vocabulary_size):
@@ -67,7 +66,6 @@ def test_all_source_values_blank_and_added_rows_survive_roundtrip(profile, tmp_p
     assert added == list(range(13087, new.blank_id))
     target.load_state_dict(initialized)
     target.tokenizer = adapter
-    install_native_output_mask(target)
     report = verify_native_state_transfer(original, target.state_dict(), old, new, mapping)
     assert report["all_source_values_preserved"] and report["learned_values_omitted"] == 0
     assert report["learned_values_preserved"] == sum(value.numel() for value in original.values())

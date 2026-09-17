@@ -14,9 +14,6 @@ def main(argv=None):
         migrate.add_argument("--" + name, required=True)
     migrate.add_argument("--seed", type=int, default=0)
     migrate.add_argument("--max-new-mass-ratio", type=float, default=0.05)
-    migrate.add_argument("--model-config")
-    migrate.add_argument("--training-template")
-    migrate.add_argument("--training-overrides")
     args = parser.parse_args(argv)
     try:
         if args.operation == "check":
@@ -30,8 +27,7 @@ def main(argv=None):
             from .native_checkpoint import migrate_native_checkpoint
             result = migrate_native_checkpoint(args.source, args.bundle, args.output,
                 expected_source_sha256=args.source_sha256, seed=args.seed,
-                max_new_mass_ratio=args.max_new_mass_ratio, model_config=args.model_config,
-                training_template=args.training_template, training_overrides=args.training_overrides)
+                max_new_mass_ratio=args.max_new_mass_ratio)
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 0
     except (ValueError, OSError, RuntimeError, ImportError) as error:

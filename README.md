@@ -27,7 +27,7 @@ Or install with `python -m pip install .`. All four bundles are included.
 
 Included Nemotron pieces keep their original IDs, scores and types. Subsets
 reserve excluded IDs as inactive slots, so they do not shrink the acoustic
-model. Untok's NeMo runtime masks those outputs. The original normalizer stays
+model. Untok's masked joint disables those outputs in NeMo. The original normalizer stays
 unchanged; RNNT blank is the final acoustic row.
 
 ## Use
@@ -56,7 +56,9 @@ untok migrate \
 ```
 
 Migration retains existing weights and initializes new rows from existing text
-pieces. New pieces still need speech training. See [checkpoint usage](docs/native-checkpoint.md)
+pieces. It writes an ordinary NVIDIA model checkpoint and a `.tokenizer`
+directory for NeMo. Restricted bundles use a small masked joint component.
+Training settings stay in the training YAML. New pieces still need speech training. See [checkpoint usage](docs/native-checkpoint.md)
 and [indic-asr](https://github.com/plivo-labs/indic-asr) for NVIDIA's training
 and evaluation scripts. No trained replacement checkpoint is included.
 
