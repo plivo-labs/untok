@@ -54,7 +54,7 @@ listed above; NVIDIA's license does not replace those terms.
 The migration command does not embed these sidecars in `.nemo` checkpoints;
 include them separately when redistributing a migrated checkpoint.
 
-In the packaged selection metadata, `study/` replaces the original study
+In the repository selection metadata, `study/` replaces the original study
 workspace prefix. Source content hashes, piece selections, scores and tokenizer
 models are unchanged; the metadata has its own updated integrity hash.
 

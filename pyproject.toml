@@ -20,12 +20,15 @@ checkpoint = ["torch>=2.8,<3", "omegaconf>=2.3,<3"]
 [project.scripts]
 untok = "untok.cli:main"
 
+[tool.setuptools]
+include-package-data = false
+
 [tool.setuptools.packages.find]
 where = ["src"]
 namespaces = false
 
 [tool.setuptools.package-data]
-untok = ["data/*.json", "data/*/*.json", "data/*/*.model", "notices/*.md", "notices/licenses/*.txt"]
+untok = ["data/*.json", "data/original/*", "data/latin/*", "data/latin-indic/*", "data/full/*", "notices/*.md", "notices/licenses/*.txt"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

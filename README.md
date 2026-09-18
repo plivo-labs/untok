@@ -5,7 +5,7 @@ native tokenizer and extended with Indic vocabulary.
 
 ## Install
 
-On Linux or macOS, use Python 3.11 or later:
+On Linux or macOS, with Python 3.11 or later and [uv](https://docs.astral.sh/uv/getting-started/installation/):
 
 ```sh
 git clone https://github.com/plivo-labs/untok.git
@@ -14,7 +14,8 @@ uv sync --locked
 source .venv/bin/activate
 ```
 
-Or install with `python -m pip install .`. All four bundles are included.
+Alternatively, install with `python -m pip install .` in your Python environment.
+All four bundles are included.
 
 ## Choose a bundle
 
@@ -25,10 +26,9 @@ Or install with `python -m pip install .`. All four bundles are included.
 | `latin-indic` | 10,372 | 20,360 | 20,360 | 3,099 original pieces + 7,273 Indic/shared additions |
 | `full` | 20,360 | 20,360 | 20,360 | All original pieces + the same additions |
 
-Included Nemotron pieces keep their original IDs, scores and types. Subsets
-reserve excluded IDs as inactive slots, so they do not shrink the acoustic
-model. Untok's masked joint disables those outputs in NeMo. The original normalizer stays
-unchanged; RNNT blank is the final acoustic row.
+Retained pieces keep their original IDs, scores and types. The original
+normalizer is unchanged. Excluded IDs remain inactive slots, so subsets do not
+shrink the acoustic model. RNNT blank is the final acoustic row.
 
 ## Use
 
@@ -40,12 +40,12 @@ ids = tokenizer.text_to_ids("நான் office போகிறேன்")
 print(tokenizer.ids_to_text(ids))
 ```
 
-Select another bundle name the same way, or pass a bundle directory. These are
-native text IDs. Text tokenization needs neither NeMo nor a GPU.
+Pass any bundle name or a bundle directory. Text tokenization needs neither
+NeMo nor a GPU.
 
 ## Nemotron checkpoint
 
-In a compatible NeMo environment:
+In the [NeMo environment used by indic-asr](https://github.com/plivo-labs/indic-asr/blob/main/docs/setup.md):
 
 ```sh
 untok migrate \
@@ -55,12 +55,15 @@ untok migrate \
   --output nemotron-latin-indic.nemo
 ```
 
-Migration retains existing weights and initializes new rows from existing text
-pieces. It writes an ordinary NVIDIA model checkpoint and a `.tokenizer`
-directory for NeMo. Restricted bundles use a small masked joint component.
-Training settings stay in the training YAML. New pieces still need speech training. See [checkpoint usage](docs/native-checkpoint.md)
-and [indic-asr](https://github.com/plivo-labs/indic-asr) for NVIDIA's training
-and evaluation scripts. No trained replacement checkpoint is included.
+Preparation retains existing weights, moves blank and initializes added rows
+from existing text pieces. It saves a checkpoint using NVIDIA's model class
+and ordinary SentencePiece files. Latin and Latin + Indic also require Untok's
+configured joint component to mask inactive outputs.
+
+Training uses NVIDIA's scripts and a directly editable YAML. See
+[checkpoint usage](docs/native-checkpoint.md) for restore instructions and
+[indic-asr](https://github.com/plivo-labs/indic-asr) for training and evaluation.
+New pieces need speech training; no trained replacement model is included.
 
 ## Languages and limitations
 
