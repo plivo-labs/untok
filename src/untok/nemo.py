@@ -40,15 +40,19 @@ class MaskedRNNTJoint(RNNTJoint):
 
 
 def register():
-    """Allow only this component through NeMo's existing target-validation rules."""
+    """Allow only Untok's components through NeMo's existing target-validation rules."""
     from nemo.core.classes import common
 
     prefixes = getattr(common, "ALLOWED_TARGET_PREFIXES", None)
     if not isinstance(prefixes, list):
         raise RuntimeError("Unsupported NeMo target registry; use the documented NeMo revision")
-    target = "untok.nemo.MaskedRNNTJoint"
-    if target not in prefixes:
-        prefixes.append(target)
+    for target in ("untok.nemo.MaskedRNNTJoint", "untok.training.NewSliceLR"):
+        if target not in prefixes:
+            prefixes.append(target)
+    # A Lightning callback is not one of NeMo's safe base classes, so it must also be an exact allowed target.
+    exact = getattr(common, "ALLOWED_EXACT_CLASS_TARGETS", None)
+    if isinstance(exact, set):
+        exact.add("untok.training.NewSliceLR")
 
 
 if __name__ == "__main__":

@@ -65,6 +65,22 @@ Training uses NVIDIA's scripts and a directly editable YAML. See
 [indic-asr](https://github.com/plivo-labs/indic-asr) for training and evaluation.
 New pieces need speech training; no trained replacement model is included.
 
+## Adding Indic languages
+
+Before training a checkpoint on Indic languages it was not trained on, prepare it once:
+
+```sh
+untok normalize-manifest --input raw/ta-IN.jsonl --output data/ta-IN.jsonl
+untok init-languages --source trained.nemo --source-sha256 <sha256> --output languages.nemo
+untok calibrate --source languages.nemo --source-sha256 <sha256> --output languages-calibrated.nemo \
+  --manifest ta-IN=data/ta-IN.jsonl --manifest te-IN=data/te-IN.jsonl ...
+```
+
+`init-languages` starts the prompt slot of every Indic language from the trained `auto` slot and gives rows that
+are still identical copies (every Tamil, Telugu, Bengali, ... row, and leftover Devanagari and Arabic copies) a
+spread-out start. `calibrate` is required for every language the report lists as `initialized`: it fits those rows
+from audio. Training refuses uncalibrated languages. See [Adding Indic languages](docs/indic-languages.md).
+
 ## Languages and limitations
 
 These counts describe the documented text profiles, not validated ASR support:

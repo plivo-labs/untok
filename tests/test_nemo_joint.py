@@ -84,8 +84,12 @@ def test_registration_adds_only_full_target_without_replacing_validation(integra
     predicate = common._is_target_allowed
     module.register()
     module.register()
-    assert common.ALLOWED_TARGET_PREFIXES == ["nemo.collections.", "untok.nemo.MaskedRNNTJoint"]
+    assert common.ALLOWED_TARGET_PREFIXES == ["nemo.collections.", "untok.nemo.MaskedRNNTJoint",
+                                             "untok.training.NewSliceLR"]
     assert common._is_target_allowed is predicate
+    common.ALLOWED_EXACT_CLASS_TARGETS = {"nemo.Example"}
+    module.register()
+    assert common.ALLOWED_EXACT_CLASS_TARGETS == {"nemo.Example", "untok.training.NewSliceLR"}
     common.ALLOWED_TARGET_PREFIXES = ()
     with pytest.raises(RuntimeError, match="Unsupported NeMo"):
         module.register()

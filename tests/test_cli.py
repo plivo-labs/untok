@@ -1,4 +1,4 @@
-"""Only current bundle inspection and native migration are public commands."""
+"""Public commands: bundle inspection, native migration and Indic-language preparation."""
 import json
 
 import pytest
@@ -36,3 +36,24 @@ def test_retired_commands_are_not_exposed(command):
 def test_check_rejects_a_missing_bundle(tmp_path, capsys):
     assert main(["check", "--bundle", str(tmp_path / "missing")]) == 1
     assert capsys.readouterr().err
+
+
+def test_init_languages_defaults_to_every_indic_language(monkeypatch, capsys):
+    import untok.language_init as language_init
+    calls = []
+    monkeypatch.setattr(language_init, "init_languages", lambda *a, **k: calls.append((a, k)) or {"ok": True})
+    assert main(["init-languages", "--source", "s.nemo", "--source-sha256", "a" * 64, "--output", "o.nemo"]) == 0
+    assert calls == [(("s.nemo", "o.nemo"), {"source_sha256": "a" * 64, "languages": "all", "bundle": "latin-indic",
+                                             "seed": 0, "force_prompt_slots": False})]
+
+
+def test_calibrate_takes_one_manifest_per_language(monkeypatch, capsys):
+    import untok.calibration as calibration
+    calls = []
+    monkeypatch.setattr(calibration, "calibrate", lambda *a, **k: calls.append(k["manifests"]) or {"ok": True})
+    base = ["calibrate", "--source", "s.nemo", "--source-sha256", "a" * 64, "--output", "o.nemo"]
+    assert main([*base, "--manifest", "ta-IN=ta.jsonl", "--manifest", "bn-IN=bn.jsonl"]) == 0
+    assert calls == [{"ta-IN": "ta.jsonl", "bn-IN": "bn.jsonl"}]
+    capsys.readouterr()
+    assert main([*base, "--manifest", "ta.jsonl"]) == 1
+    assert main([*base, "--manifest", "ta-IN=a", "--manifest", "ta-IN=b"]) == 1
