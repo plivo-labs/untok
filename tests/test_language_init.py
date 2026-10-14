@@ -99,9 +99,10 @@ def test_training_refuses_uncalibrated_new_script_languages(tmp_path):
     ta-IN: {script: Tamil, rows: initialized, prompt_slot: 39, prompt_init: auto_copy, calibrated: false}
     mr-IN: {script: Devanagari, rows: trained, prompt_slot: 41, prompt_init: auto_copy, calibrated: not_required}
     te-IN: {script: Telugu, rows: initialized, prompt_slot: 40, prompt_init: auto_copy, calibrated: true}
+    hi-IN: {script: Devanagari, rows: initialized, prompt_slot: 6, prompt_init: kept_trained, calibrated: dormant_leftovers}
 """)
     metadata = read_language_metadata(path)
-    require_calibrated(metadata, ["te-IN", "mr-IN"])
+    require_calibrated(metadata, ["te-IN", "mr-IN", "hi-IN"])  # dormant leftovers learn from training targets
     with pytest.raises(ValueError, match="ta-IN"):
         require_calibrated(metadata, ["ta-IN", "te-IN"])
     with pytest.raises(ValueError, match="bn-IN"):
@@ -134,3 +135,41 @@ def test_rerun_keeps_scripts_recorded_earlier():
         assert again["scripts"] == {} and again["languages"]["ta-IN"]["rows"] == "initialized"
     finally:
         language_init.script_rows, language_init.original_size = original
+
+
+def test_init_marks_leftovers_of_scripts_nvidia_wrote_dormant(tmp_path, monkeypatch):
+    torch = pytest.importorskip("torch")
+    OmegaConf = pytest.importorskip("omegaconf").OmegaConf
+    from types import SimpleNamespace
+    import untok.language_init as language_init
+
+    model = SimpleNamespace(cfg=OmegaConf.create({"model_defaults": {"enc_hidden": ENC}}),
+                            state_dict=lambda: {LAYOUT.output_weight_key: torch.zeros(VOCAB + 1, HIDDEN)},
+                            load_state_dict=lambda state, strict: None)
+    plan = {"languages": {"ta-IN": {"prompt_slot": 39, "script": "Tamil", "rows": "initialized"},
+                          "mr-IN": {"prompt_slot": 41, "script": "Devanagari", "rows": "initialized"},
+                          "ur-PK": {"prompt_slot": 50, "script": "Arabic", "rows": "initialized"}},
+            "scripts": {"Tamil": {"rows": [20, 21], "donors": [2, 3], "donor_script": "Devanagari"},
+                        "Devanagari": {"rows": [22], "donors": [2, 3], "donor_script": "Devanagari"},
+                        "Arabic": {"rows": [23, 24], "donors": [4, 5], "donor_script": "Arabic"}},
+            "slots": [39, 41, 50]}
+    saved = {}
+
+    def save(model, metadata, output, tokenizer_dir, adapter):
+        saved.update(metadata)
+        output.write_bytes(b"checkpoint")
+
+    adapter = SimpleNamespace(profile="latin-indic", tokenizer_sha256="t")
+    monkeypatch.setattr(language_init, "restore_profile_checkpoint", lambda *args: (model, adapter, {}, LAYOUT))
+    monkeypatch.setattr(language_init, "resolve_languages", lambda registry, languages: list(plan["languages"]))
+    monkeypatch.setattr(language_init, "build_plan", lambda *args, **kwargs: plan)
+    monkeypatch.setattr(language_init, "init_language_state", lambda state, layout, enc, plan, **kwargs: (
+        state, {s: {"rows": len(v["rows"])} for s, v in plan["scripts"].items()}, dict.fromkeys(plan["slots"], "auto_copy")))
+    monkeypatch.setattr(language_init, "save_with_metadata", save)
+    report = language_init.init_languages("in.nemo", tmp_path / "out.nemo", source_sha256="s")
+    assert {k: v["calibrated"] for k, v in report["languages"].items()} == {
+        "ta-IN": False, "mr-IN": "dormant_leftovers", "ur-PK": "dormant_leftovers"}
+    assert saved["languages"] == report["languages"]
+    require_calibrated(saved, ["mr-IN", "ur-PK"])
+    with pytest.raises(ValueError, match="ta-IN"):
+        require_calibrated(saved, ["ta-IN", "mr-IN"])

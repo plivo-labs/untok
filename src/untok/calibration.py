@@ -5,6 +5,8 @@ prompt (prediction network at its start state, attention context [56, 1]). Each 
 the probe's blank become that token's offset; offsets are centred and scaled to the Devanagari rows' spread, so a
 token's row points at the sound of that token instead of a random direction. Tokens the probe never saw get the
 mean offset and a low bias. Only the initialised output rows and biases change; the sidecar records the receipt.
+Only scripts NVIDIA never wrote are calibrated: manifests for Devanagari or Arabic languages are skipped, since those
+scripts' leftover rows stay dormant.
 """
 from __future__ import annotations
 
@@ -209,6 +211,9 @@ def calibrate(source, output, *, source_sha256, manifests, bundle="latin-indic",
             raise ValueError(f"{locale} was not initialised with `untok init-languages`")
         if info["rows"] != "initialized":
             skipped[locale] = "the script's rows are trained; nothing to calibrate"
+            continue
+        if metadata["scripts"][info["script"]]["donor_script"] == info["script"]:
+            skipped[locale] = "leftover rows of a script NVIDIA wrote stay dormant; they learn from training targets"
             continue
         by_script.setdefault(info["script"], []).append((locale, Path(path)))
     if not by_script:

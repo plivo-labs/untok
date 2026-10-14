@@ -10,7 +10,9 @@ For every requested language:
   Donors are the script's own trained rows when NVIDIA's vocabulary had the script (Arabic, Devanagari), else the
   Devanagari rows. `init-languages` places every such row exactly at the donor mean with its bias DORMANT_SHIFT below
   the donors' mean, so uncalibrated rows stay silent (random offsets made them fire on Hindi audio); `calibrate`
-  (required before training) adds offsets fitted from audio and lifts the biases to the trained rows' level.
+  (required before training) adds offsets fitted from audio and lifts the biases to the trained rows' level. That
+  holds for scripts NVIDIA never wrote. Leftover copies of a script NVIDIA wrote (Devanagari, Arabic) stay dormant,
+  are marked `dormant_leftovers` and learn from training targets.
 
 Everything else stays bit-identical. Metadata goes to `cfg.untok_languages` and a `.languages.json` sidecar.
 """
@@ -185,7 +187,10 @@ def read_language_metadata(nemo_path):
 
 
 def require_calibrated(metadata, locales):
-    """Refuse training a language whose initialised rows were not calibrated from audio."""
+    """Refuse training a language whose initialised rows were not calibrated from audio.
+
+    Languages marked `dormant_leftovers` (leftover Devanagari or Arabic copies) pass: they learn from training targets.
+    """
     if metadata is None:
         raise ValueError("Checkpoint has no Untok language metadata; run `untok init-languages` and `untok calibrate`")
     missing = [l for l in locales if l not in metadata["languages"]]
@@ -281,7 +286,14 @@ def init_languages(source, output, *, source_sha256, languages="all", bundle="la
     for locale, info in plan["languages"].items():
         calibrated = "not_required"
         if info["rows"] == "initialized":  # a script recorded earlier may already be calibrated
-            calibrated = metadata["scripts"][info["script"]].get("calibration") is not None
+            item = metadata["scripts"][info["script"]]
+            if item["donor_script"] == info["script"]:
+                # NVIDIA wrote this script (Devanagari, Arabic): its copies are a rare tail (57 Devanagari rows, 45 of
+                # them never in Marathi text). Calibrating them from audio blew them up (gamma 7.13, bias +26.9); they
+                # stay dormant and learn from training targets with NewSliceLR, as ळ did in Plivo's fine-tune.
+                calibrated = "dormant_leftovers"
+            else:
+                calibrated = item.get("calibration") is not None
         metadata["languages"][locale] = {**info, "prompt_init": prompts[info["prompt_slot"]], "calibrated": calibrated}
     save_with_metadata(model, metadata, output, tokenizer_dir, adapter)
     report = {"checkpoint_sha256": _sha256(output), "tokenizer_directory": str(tokenizer_dir),

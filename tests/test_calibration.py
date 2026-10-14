@@ -39,3 +39,30 @@ def test_batches_respect_the_padded_frame_budget():
     batches = _batches(lengths, 100)
     assert sorted(i for b in batches for i in b) == list(range(6))
     assert all(max(lengths[i] for i in b) * len(b) <= 100 for b in batches)
+
+
+def test_calibrate_skips_leftovers_of_scripts_nvidia_wrote(tmp_path, monkeypatch):
+    torch = pytest.importorskip("torch")
+    OmegaConf = pytest.importorskip("omegaconf").OmegaConf
+    from types import SimpleNamespace
+    import untok.calibration as calibration
+
+    class Calibrating(Exception):
+        pass
+
+    def to(device):
+        raise Calibrating
+
+    metadata = {"languages": {"mr-IN": {"script": "Devanagari", "rows": "initialized", "calibrated": "dormant_leftovers"},
+                              "ta-IN": {"script": "Tamil", "rows": "initialized", "calibrated": False}},
+                "scripts": {"Devanagari": {"rows": [22], "donor_script": "Devanagari"},
+                            "Tamil": {"rows": [20, 21], "donor_script": "Devanagari"}}}
+    model = SimpleNamespace(cfg=OmegaConf.create({"untok_languages": metadata}), to=to)
+    monkeypatch.setattr(calibration, "restore_profile_checkpoint", lambda *args: (model, None, None, None))
+    monkeypatch.setattr(torch.backends.cuda.matmul, "allow_tf32", torch.backends.cuda.matmul.allow_tf32)
+    monkeypatch.setattr(torch.backends.cudnn, "allow_tf32", torch.backends.cudnn.allow_tf32)
+    with pytest.raises(ValueError, match="None of the manifests"):  # Marathi alone: nothing to calibrate
+        calibration.calibrate("in.nemo", tmp_path / "a.nemo", source_sha256="s", manifests={"mr-IN": "mr.jsonl"})
+    with pytest.raises(Calibrating):  # Tamil goes on to calibration
+        calibration.calibrate("in.nemo", tmp_path / "b.nemo", source_sha256="s",
+                              manifests={"mr-IN": "mr.jsonl", "ta-IN": "ta.jsonl"})
