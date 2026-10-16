@@ -6,7 +6,7 @@ from importlib import resources
 import json
 
 
-REGISTRY_SHA256 = "b8b36265160ab64140ef6adad5582c824624916e2256596bd0113ccfe47c9ffe"
+REGISTRY_SHA256 = "21c8ebb91030a6347c3043c9e5b1818d9b7e940aa56505248cd064902a179525"
 
 
 def _load_registry():

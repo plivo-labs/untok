@@ -10,6 +10,16 @@ from sentencepiece import sentencepiece_model_pb2 as pb
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs/current-tokenizers.json"
+# New output-language tags take the exact form (type, score) of NVIDIA's own Hindi tag.
+TAG_TEMPLATE = "<hi-IN>"
+
+
+def tag_piece(original: pb.ModelProto, tag: str) -> pb.ModelProto.SentencePiece:
+    template = next(p for p in original.pieces if p.piece == TAG_TEMPLATE)
+    piece = pb.ModelProto.SentencePiece()
+    piece.CopyFrom(template)
+    piece.piece = tag
+    return piece
 
 
 def digest(raw: bytes) -> str:
@@ -48,6 +58,9 @@ def build(output: Path, *, assets: Path = ROOT / "src/untok/data",
             model.pieces[index].CopyFrom(pb.ModelProto.SentencePiece(
                 piece=f"<unused_nemotron_{index}>", score=0.0,
                 type=pb.ModelProto.SentencePiece.UNUSED))
+        # Tags for languages the original has no tag for reuse slots of original tags outside the profile.
+        for index, tag in spec.get("language_tags", {}).items():
+            model.pieces[int(index)].CopyFrom(tag_piece(original, tag))
         for piece, score, kind, _source_id in selection["additions"][:spec["additions"]]:
             model.pieces.add(piece=piece, score=score, type=kind)
         if profile != "original":

@@ -58,7 +58,9 @@ def donor_paths(adapter, added, retained):
     base = pb.ModelProto.FromString(adapter.base_model_bytes)
     target = pb.ModelProto.FromString(adapter.model_bytes)
     inactive = set(getattr(adapter, "inactive_native_ids", ()))
-    mapping = tuple(None if i in inactive or i not in retained else i
+    # A slot reused for a new language tag no longer holds its original piece, so it is no donor.
+    reused = {i for i, piece in enumerate(base.pieces) if target.pieces[i].piece != piece.piece}
+    mapping = tuple(None if i in inactive or i in reused or i not in retained else i
                     for i in adapter.source_native_to_target_native)
     normal = tuple(sorted(i for i in mapping[:-1] if i is not None
                           and target.pieces[i].type == pb.ModelProto.SentencePiece.NORMAL))

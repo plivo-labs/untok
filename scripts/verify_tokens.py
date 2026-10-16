@@ -5,11 +5,21 @@ import argparse
 import hashlib
 import json
 from pathlib import Path
+import re
 
 from sentencepiece import sentencepiece_model_pb2 as pb
 
 ROOT = Path(__file__).resolve().parents[1]
 CONFIG = ROOT / "configs/current-tokenizers.json"
+LOCALE_TAG = re.compile(r"<[a-z]{2,3}-[A-Z]{2}>")
+TAG_TEMPLATE = "<hi-IN>"  # added tags must have the exact type and score of NVIDIA's own Hindi tag
+
+
+def tag_piece(original: pb.ModelProto, tag: str) -> pb.ModelProto.SentencePiece:
+    piece = pb.ModelProto.SentencePiece()
+    piece.CopyFrom(next(p for p in original.pieces if p.piece == TAG_TEMPLATE))
+    piece.piece = tag
+    return piece
 
 
 def require(condition: bool, message: str) -> None:
@@ -64,11 +74,24 @@ def verify(data: Path, *, baseline_dir: Path | None = None,
         require(mapping["inactive_native_ids"] == inactive, f"{profile}: inactive IDs changed")
         require([i for i, p in enumerate(model.pieces) if p.type == pb.ModelProto.SentencePiece.UNUSED]
                 == inactive, f"{profile}: inactive piece types changed")
+        tags = {int(index): tag for index, tag in spec.get("language_tags", {}).items()}
+        original_pieces = {p.piece for p in original.pieces}
+        registry = json.loads((ROOT / "src/untok/data/prompt-registry.json").read_text()) if tags else {}
+        locales = {e["locale"] for e in registry.get("profiles", {}).get(profile, {}).get("target_assignments", [])}
+        for index, tag in tags.items():
+            require(index not in inactive_set and LOCALE_TAG.fullmatch(original.pieces[index].piece)
+                    and LOCALE_TAG.fullmatch(tag) and tag not in original_pieces,
+                    f"{profile}: language tag {tag} must be new and reuse an original locale-tag slot")
+            require(tag[1:-1] in locales, f"{profile}: language tag {tag} is not a target language of the profile")
+        require(len(set(tags.values())) == len(tags), f"{profile}: duplicate language tags")
         for index, expected in enumerate(original.pieces):
             piece = model.pieces[index]
             if index in inactive_set:
                 require(piece.piece == f"<unused_nemotron_{index}>" and piece.score == 0.0,
                         f"{profile}: reserved ID {index} changed")
+            elif index in tags:
+                require(piece.SerializeToString() == tag_piece(original, tags[index]).SerializeToString(),
+                        f"{profile}: language tag ID {index} changed")
             else:
                 require(piece.SerializeToString() == expected.SerializeToString(),
                         f"{profile}: original token ID {index} changed")
@@ -104,10 +127,10 @@ def verify(data: Path, *, baseline_dir: Path | None = None,
                 f"{profile}: active token count changed")
         results[profile] = {"text_entries": len(model.pieces),
                             "active_entries": spec["active_entries"],
-                            "inactive_entries": len(inactive),
+                            "inactive_entries": len(inactive), "language_tags": len(tags),
                             "added_entries": len(additions), "blank_id": spec["blank_id"]}
-    # These are hashes captured from the immutable pre-cleanup commit, not
-    # checksums generated from the candidate we are checking.
+    # These are hashes captured from the immutable pre-cleanup commit (latin-indic
+    # version 6 from this repository), not checksums generated from the candidate.
     for name, expected in expected_hashes.items():
         require(digest((data / name).read_bytes()) == expected, f"Published SHA256 mismatch: {name}")
         if baseline_dir is not None:

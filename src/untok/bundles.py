@@ -10,11 +10,11 @@ from pathlib import Path
 import sentencepiece as spm
 
 PROFILES = ("original", "latin", "latin-indic", "full")
-# Published e2f8acd manifests pin every model and metadata file independently.
+# Published e2f8acd manifests pin every model and metadata file independently; latin-indic v6 adds output tags.
 _MANIFEST_SHA256 = {
     "original": "4839890ba1106ab6e9648806c8282893e31f116bc05f8c13eb0e222e5e06095f",
     "latin": "8302b9537bae83ad9e2d86437fae560da1581694c22ab9414251ab3b41c156e6",
-    "latin-indic": "a9e4a89aae55f3f6369af6c64882e2c1dfe6ea7d1e08d5200b3c9063821a7a81",
+    "latin-indic": "f3d32ece22d43bbff3cdb28de60b0bc612e1dd88326c44de438eec2fed442c0c",
     "full": "02ede11284b37eb6b0da1b14f44232ba1f5e358a5ff84c82001730959dd69f29",
 }
 
@@ -37,6 +37,8 @@ class Tokenizer:
         self.model_bytes = files["tokenizer.model"]
         self.base_model_bytes = files["base-tokenizer.model"]
         self.tokenizer_sha256 = manifest["tokenizer_sha256"]
+        # Earlier versions of this profile (same IDs, fewer tags) whose checkpoints are still accepted.
+        self.accepted_tokenizer_sha256 = (self.tokenizer_sha256, *manifest.get("superseded_tokenizer_sha256", ()))
         self.profile = profile
         self.backend = spm.SentencePieceProcessor(model_proto=self.model_bytes)
         self.tokenizer = self

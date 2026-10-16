@@ -13,11 +13,18 @@ For every requested language:
   (required before training) adds offsets fitted from audio and lifts the biases to the trained rows' level. That
   holds for scripts NVIDIA never wrote. Leftover copies of a script NVIDIA wrote (Devanagari, Arabic) stay dormant,
   are marked `dormant_leftovers` and learn from training targets.
+- output tags: latin-indic v6 has `<bn-IN>` ... `<as-IN>` in reused original tag slots, which a fresh migration still
+  fills with NVIDIA's rows of the replaced tags (`<bg-BG>`, `<zh-CN>`, ...). The first `init-languages` therefore starts
+  every new-language tag in the tokenizer, requested or not, as a copy of the trained `<hi-IN>` output row and decoder
+  embedding row with its bias DORMANT_SHIFT lower, so it never ties with `<hi-IN>` (an exact copy would win greedy ties
+  from the lower ID). `NewSliceLR` trains the tag rows of the listed languages at the new-row rate, so a recipe with
+  tag targets lifts them. Checkpoints made with the untagged v5 profile are still accepted and keep their tokenizer.
 
 Everything else stays bit-identical. Metadata goes to `cfg.untok_languages` and a `.languages.json` sidecar.
 """
 from __future__ import annotations
 
+import hashlib
 import io
 import json
 import tarfile
@@ -27,6 +34,7 @@ from .checkpoint import _sha256, _torch, inspect_nemo_layout
 from .languages import DONOR_SCRIPT, original_size, registry_languages, resolve_languages, script_rows
 
 AUTO_SLOT = 101
+TAG_DONOR = "hi-IN"  # new output-language tags start from NVIDIA's trained Hindi tag
 INIT_POLICY = "devanagari_mean_scaled_offsets_v1"
 PROMPT_KEY = "prompt_kernel.0.weight"
 # Untrained prompt columns have norm ~0.57; trained ones ~13.5. Anything above this is treated as trained.
@@ -82,7 +90,8 @@ def copy_prompt_columns(prompt_weight, enc_hidden, slots, *, force=False):
 def init_language_state(state, layout, enc_hidden, plan, *, seed=0, force_prompt_slots=False):
     """Pure state-dict version of init-languages. Returns (new_state, script_reports, prompt_reports).
 
-    plan = {"slots": [...], "scripts": {script: {"rows": [...], "donors": [...]}}}. Input state and global RNG stay
+    plan = {"slots": [...], "scripts": {script: {"rows": [...], "donors": [...]}},
+            "tags": {locale: {"row": id, "donor": id or None}}} ("tags" optional). Input state and global RNG stay
     untouched.
     """
     torch = _torch()
@@ -94,6 +103,9 @@ def init_language_state(state, layout, enc_hidden, plan, *, seed=0, force_prompt
         new[key] = new[key].detach().clone()
     prompts = copy_prompt_columns(new[PROMPT_KEY], enc_hidden, plan["slots"], force=force_prompt_slots)
     weight, bias, embedding = new[layout.output_weight_key], new[layout.output_bias_key], new[layout.embedding_key]
+    for item in tag_copies(plan):
+        weight[item["row"]], embedding[item["row"]] = weight[item["donor"]], embedding[item["donor"]]
+        bias[item["row"]] = bias[item["donor"]] - DORMANT_SHIFT
     generator = torch.Generator().manual_seed(seed)
     scripts = {}
     for script, item in plan["scripts"].items():
@@ -112,7 +124,8 @@ def init_language_state(state, layout, enc_hidden, plan, *, seed=0, force_prompt
 def verify_untouched(old, new, layout, plan, enc_hidden):
     """Every value outside the initialised rows and prompt columns must be bit-identical."""
     torch = _torch()
-    rows = sorted({r for item in plan["scripts"].values() for r in item["rows"]})
+    rows = sorted({r for item in plan["scripts"].values() for r in item["rows"]}
+                  | {item["row"] for item in tag_copies(plan)})
     columns = [enc_hidden + s for s in plan["slots"]]
     for key, before in old.items():
         after = new[key]
@@ -126,6 +139,29 @@ def verify_untouched(old, new, layout, plan, enc_hidden):
             before, after = before[:, keep], after[:, keep]
         if not torch.equal(before, after):
             raise ValueError(f"Values outside the new-language rows changed: {key}")
+
+
+def tag_copies(plan):
+    """Tag rows that start as copies of the donor tag's rows (languages other than the donor's own)."""
+    return [item for item in plan.get("tags", {}).values() if item["donor"] is not None]
+
+
+def tag_plan(model_bytes, locales):
+    """locale -> {"row", "donor"} for every language of `locales` whose `<locale>` tag is a piece of the checkpoint's
+    tokenizer. The donor is `<hi-IN>`'s row; None for Hindi itself, whose tag NVIDIA trained."""
+    import sentencepiece as spm
+
+    backend = spm.SentencePieceProcessor(model_proto=model_bytes)
+
+    def find(locale):
+        index = backend.piece_to_id(f"<{locale}>")
+        return index if backend.id_to_piece(index) == f"<{locale}>" else None
+
+    donor = find(TAG_DONOR)
+    if donor is None:
+        return {}
+    return {locale: {"row": find(locale), "donor": None if locale == TAG_DONOR else donor}
+            for locale in locales if find(locale) is not None}
 
 
 def identical_copies(weight, rows):
@@ -201,10 +237,14 @@ def require_calibrated(metadata, locales):
         raise ValueError(f"Run `untok calibrate` first; uncalibrated languages: {', '.join(uncalibrated)}")
 
 
-def _write_tokenizer_dir(directory, adapter):
+def _write_tokenizer_dir(directory, model_bytes):
+    """The checkpoint's own tokenizer (a superseded profile version stays as it was)."""
+    import sentencepiece as spm
+
+    backend = spm.SentencePieceProcessor(model_proto=model_bytes)
     directory.mkdir(parents=True)
-    (directory / "tokenizer.model").write_bytes(adapter.model_bytes)
-    pieces = [adapter.backend.id_to_piece(i) for i in range(adapter.vocab_size)]
+    (directory / "tokenizer.model").write_bytes(model_bytes)
+    pieces = [backend.id_to_piece(i) for i in range(backend.get_piece_size())]
     (directory / "vocab.txt").write_text("\n".join(pieces) + "\n", encoding="utf-8")
 
 
@@ -234,7 +274,8 @@ def restore_profile_checkpoint(source, expected_sha256, bundle):
     if type(model) is not EncDecRNNTBPEModelWithPrompt:
         raise ValueError("Checkpoint must be NVIDIA's prompted RNNT model")
     layout = inspect_nemo_layout(model)
-    if layout.blank_id != adapter.blank_id or _source_native_bytes(model) != adapter.model_bytes:
+    native_sha256 = hashlib.sha256(_source_native_bytes(model)).hexdigest()
+    if layout.blank_id != adapter.blank_id or native_sha256 not in adapter.accepted_tokenizer_sha256:
         raise ValueError("Checkpoint tokenizer or blank differs from the bundle")
     registry = profile_registry(adapter.profile)
     if dict(model.cfg.model_defaults.prompt_dictionary) != registry["prompt_dictionary"]:
@@ -242,8 +283,9 @@ def restore_profile_checkpoint(source, expected_sha256, bundle):
     return model, adapter, registry, layout
 
 
-def save_with_metadata(model, metadata, output, tokenizer_dir, adapter):
+def save_with_metadata(model, metadata, output, tokenizer_dir):
     from omegaconf import open_dict
+    from .native_checkpoint import _source_native_bytes
 
     cfg = model.cfg
     with open_dict(cfg):
@@ -251,7 +293,7 @@ def save_with_metadata(model, metadata, output, tokenizer_dir, adapter):
     model.cfg = cfg
     model.eval()
     model.save_to(str(output))
-    _write_tokenizer_dir(tokenizer_dir, adapter)
+    _write_tokenizer_dir(tokenizer_dir, _source_native_bytes(model))
 
 
 def init_languages(source, output, *, source_sha256, languages="all", bundle="latin-indic", seed=0,
@@ -267,18 +309,29 @@ def init_languages(source, output, *, source_sha256, languages="all", bundle="la
     locales = [l for l in resolve_languages(registry, languages) if l not in recorded]
     if not locales:
         raise ValueError("Every requested language was already initialised in this checkpoint")
+    from .native_checkpoint import _source_native_bytes
+
     plan = build_plan(adapter, registry, locales, model.state_dict()[layout.output_weight_key].detach(),
                       recorded_scripts=set(previous["scripts"]) if previous else ())
+    native = _source_native_bytes(model)
+    # Tags are started once, all of them: a later run must not reset a tag that training has lifted since.
+    recorded_tags = previous.get("tags") if previous else None
+    plan["tags"] = {} if recorded_tags is not None else tag_plan(native, list(registry_languages(registry)))
     enc_hidden = int(model.cfg.model_defaults.enc_hidden)
     state, scripts, prompts = init_language_state(model.state_dict(), layout, enc_hidden, plan, seed=seed,
                                                   force_prompt_slots=force_prompt_slots)
     model.load_state_dict(state, strict=True)
-    metadata = {"schema_version": 1, "profile": adapter.profile, "tokenizer_sha256": adapter.tokenizer_sha256,
+    metadata = {"schema_version": 1, "profile": adapter.profile,
+                "tokenizer_sha256": hashlib.sha256(native).hexdigest(),
                 "init_policy": INIT_POLICY, "source_checkpoint_sha256": source_sha256, "seed": seed,
                 "languages": {}, "scripts": {}}
     if previous is not None:  # keep earlier languages of a checkpoint initialised before
         metadata["languages"].update(previous["languages"])
         metadata["scripts"].update(previous["scripts"])
+    started = f"copy_of_<{TAG_DONOR}>_dormant"
+    metadata["tags"] = recorded_tags if recorded_tags is not None else {
+        locale: {"id": item["row"], "init": "kept_trained" if item["donor"] is None else started}
+        for locale, item in plan["tags"].items()}
     for script, report in scripts.items():
         item = plan["scripts"][script]
         metadata["scripts"][script] = {"rows": item["rows"], "donors": item["donors"],
@@ -295,9 +348,9 @@ def init_languages(source, output, *, source_sha256, languages="all", bundle="la
             else:
                 calibrated = item.get("calibration") is not None
         metadata["languages"][locale] = {**info, "prompt_init": prompts[info["prompt_slot"]], "calibrated": calibrated}
-    save_with_metadata(model, metadata, output, tokenizer_dir, adapter)
+    save_with_metadata(model, metadata, output, tokenizer_dir)
     report = {"checkpoint_sha256": _sha256(output), "tokenizer_directory": str(tokenizer_dir),
-              "languages": metadata["languages"],
+              "languages": metadata["languages"], "tags": metadata["tags"],
               "scripts": {k: v["init"] for k, v in metadata["scripts"].items()},
               "next_step": "untok calibrate --manifest LOCALE=train.jsonl ... (required for languages with initialised rows)"}
     sidecar.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")

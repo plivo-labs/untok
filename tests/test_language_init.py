@@ -6,7 +6,7 @@ import pytest
 
 from untok.checkpoint import RNNTLayout
 from untok.language_init import (AUTO_SLOT, PROMPT_KEY, copy_prompt_columns, donor_statistics, identical_copies,
-                                 init_language_state, place_rows, read_language_metadata, require_calibrated)
+                                 init_language_state, place_rows, read_language_metadata, require_calibrated, tag_plan)
 
 ENC, PROMPTS, HIDDEN, VOCAB = 6, 128, 5, 30
 LAYOUT = RNNTLayout("decoder.embed.weight", "joint.out.weight", "joint.out.bias", VOCAB, VOCAB + 1)
@@ -82,6 +82,39 @@ def test_init_changes_only_new_rows_and_columns_and_is_deterministic():
     assert torch.equal(state[PROMPT_KEY][:, ENC + 39], toy_state(torch)[PROMPT_KEY][:, ENC + 39])  # input untouched
 
 
+def test_new_tag_rows_start_as_dormant_copies_of_the_hindi_tag():
+    torch = pytest.importorskip("torch")
+    state = toy_state(torch)
+    plan = {**PLAN, "tags": {"ta-IN": {"row": 11, "donor": 9}, "te-IN": {"row": 12, "donor": 9},
+                             "hi-IN": {"row": 9, "donor": None}}}
+    new, _, _ = init_language_state(state, LAYOUT, ENC, plan, seed=3)
+    untouched = [i for i in range(VOCAB + 1) if i not in (11, 12, 20, 21, 22, 23, 24)]
+    for key in ("decoder.embed.weight", "joint.out.weight"):
+        assert torch.equal(new[key][11], state[key][9]) and torch.equal(new[key][12], state[key][9])
+    bias = new["joint.out.bias"]  # dormant: never ties with (or beats) the donor tag until trained
+    assert torch.equal(bias[[11, 12]], state["joint.out.bias"][[9, 9]] - 8.0)
+    for key in ("decoder.embed.weight", "joint.out.weight", "joint.out.bias"):
+        assert torch.equal(new[key][untouched], state[key][untouched])
+    with_tags, _, _ = init_language_state(state, LAYOUT, ENC, plan, seed=3)
+    without, _, _ = init_language_state(state, LAYOUT, ENC, PLAN, seed=3)
+    assert torch.equal(with_tags[PROMPT_KEY], without[PROMPT_KEY])  # tags change no prompt column
+
+
+def test_tag_plan_follows_the_checkpoint_tokenizer():
+    pytest.importorskip("sentencepiece")
+    from sentencepiece import sentencepiece_model_pb2 as pb
+    from untok.bundles import load_tokenizer
+
+    tagged = load_tokenizer("latin-indic").model_bytes
+    plan = tag_plan(tagged, ["ta-IN", "ml-IN", "hi-IN", "ne-IN"])
+    assert plan == {"ta-IN": {"row": 673, "donor": 3247}, "ml-IN": {"row": 397, "donor": 3247},
+                    "hi-IN": {"row": 3247, "donor": None}}  # Nepali has no tag
+    untagged = pb.ModelProto.FromString(tagged)  # a v5-style checkpoint: the slots are still reserved
+    for index in (673, 397):
+        untagged.pieces[index].piece = f"<unused_nemotron_{index}>"
+    assert tag_plan(untagged.SerializeToString(), ["ta-IN", "ml-IN", "hi-IN"]) == {"hi-IN": {"row": 3247, "donor": None}}
+
+
 def _nemo_with(tmp_path, text):
     path = tmp_path / "model.nemo"
     with tarfile.open(path, "w") as archive:
@@ -155,7 +188,7 @@ def test_init_marks_leftovers_of_scripts_nvidia_wrote_dormant(tmp_path, monkeypa
             "slots": [39, 41, 50]}
     saved = {}
 
-    def save(model, metadata, output, tokenizer_dir, adapter):
+    def save(model, metadata, output, tokenizer_dir):
         saved.update(metadata)
         output.write_bytes(b"checkpoint")
 
@@ -166,7 +199,16 @@ def test_init_marks_leftovers_of_scripts_nvidia_wrote_dormant(tmp_path, monkeypa
     monkeypatch.setattr(language_init, "init_language_state", lambda state, layout, enc, plan, **kwargs: (
         state, {s: {"rows": len(v["rows"])} for s, v in plan["scripts"].items()}, dict.fromkeys(plan["slots"], "auto_copy")))
     monkeypatch.setattr(language_init, "save_with_metadata", save)
+    from untok.bundles import load_tokenizer
+    import untok.native_checkpoint as native_checkpoint
+    monkeypatch.setattr(native_checkpoint, "_source_native_bytes", lambda m: load_tokenizer("latin-indic").model_bytes)
+    registry = {"target_assignments": [{"language": lang, "locale": loc, "prompt_id": 0} for lang, loc in
+                                       [("ta", "ta-IN"), ("bn", "bn-IN"), ("hi", "hi-IN"), ("ur", "ur-PK")]]}
+    monkeypatch.setattr(language_init, "restore_profile_checkpoint", lambda *args: (model, adapter, registry, LAYOUT))
     report = language_init.init_languages("in.nemo", tmp_path / "out.nemo", source_sha256="s")
+    dormant = "copy_of_<hi-IN>_dormant"  # every new tag in the tokenizer starts, requested (ta) or not (bn)
+    assert report["tags"] == {"ta-IN": {"id": 673, "init": dormant}, "bn-IN": {"id": 1, "init": dormant},
+                              "hi-IN": {"id": 3247, "init": "kept_trained"}}
     assert {k: v["calibrated"] for k, v in report["languages"].items()} == {
         "ta-IN": False, "mr-IN": "dormant_leftovers", "ur-PK": "dormant_leftovers"}
     assert saved["languages"] == report["languages"]

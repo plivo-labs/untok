@@ -12,7 +12,6 @@
   "global_score_refit": false,
   "inactive_acoustic_outputs_must_be_masked": true,
   "inactive_native_ids": [
-    1,
     3,
     5,
     7,
@@ -188,7 +187,6 @@
     515,
     516,
     517,
-    673,
     674,
     675,
     676,
@@ -340,7 +338,6 @@
     1274,
     1276,
     1278,
-    2021,
     2022,
     2023,
     2024,
@@ -443,7 +440,6 @@
     2121,
     2122,
     2123,
-    2440,
     2441,
     2442,
     2443,
@@ -532,8 +528,6 @@
     2526,
     2527,
     2528,
-    2529,
-    3134,
     3135,
     3136,
     3137,
@@ -646,7 +640,6 @@
     3244,
     3245,
     3246,
-    3446,
     3447,
     3450,
     3451,
@@ -4683,7 +4676,6 @@
     7484,
     7485,
     7488,
-    7489,
     7490,
     7491,
     7492,
@@ -6786,7 +6778,6 @@
     9690,
     9691,
     9692,
-    9695,
     9696,
     9697,
     9698,
@@ -6906,7 +6897,6 @@
     9812,
     9813,
     9814,
-    9847,
     9848,
     9849,
     9850,
@@ -10242,8 +10232,10 @@
   "profile_policy": {
     "additions_start_after_original_bank": true,
     "allowed_locale_tags": [
+      "<ar-AR>",
+      "<as-IN>",
+      "<bn-IN>",
       "<cs-CZ>",
-      "<da-DK>",
       "<de-DE>",
       "<en-GB>",
       "<en-US>",
@@ -10253,15 +10245,21 @@
       "<fi-FI>",
       "<fr-CA>",
       "<fr-FR>",
+      "<gu-IN>",
       "<hi-IN>",
       "<hr-HR>",
       "<hu-HU>",
       "<it-IT>",
+      "<kn-IN>",
       "<lt-LT>",
       "<lv-LV>",
+      "<ml-IN>",
+      "<mr-IN>",
       "<nb-NO>",
       "<nl-NL>",
       "<nn-NO>",
+      "<or-IN>",
+      "<pa-IN>",
       "<pl-PL>",
       "<pt-BR>",
       "<pt-PT>",
@@ -10269,24 +10267,42 @@
       "<sk-SK>",
       "<sl-SL>",
       "<sv-SE>",
+      "<ta-IN>",
+      "<te-IN>",
       "<tr-TR>",
       "<vi-VN>"
     ],
     "compact_ids": false,
-    "excluded_original_slots": "Reserved UNUSED placeholders; never text labels or acoustic outputs",
+    "excluded_original_slots": "Reserved UNUSED placeholders; never text labels or acoustic outputs, except the slots reused for language_tags",
     "indic_shared_additions": true,
+    "language_tags": {
+      "added": {
+        "1": "<bn-IN>",
+        "2021": "<te-IN>",
+        "2440": "<kn-IN>",
+        "3134": "<mr-IN>",
+        "3446": "<gu-IN>",
+        "397": "<ml-IN>",
+        "673": "<ta-IN>",
+        "7489": "<pa-IN>",
+        "9695": "<or-IN>",
+        "9847": "<as-IN>"
+      },
+      "form": "Exact type and score of the original <hi-IN> piece",
+      "slots": "Reuse slots of original tags whose languages are outside the profile, so no ID moves"
+    },
     "latin_extension_additions": false,
     "locale_filter_before_piece_type": true,
-    "new_output_language_tags": false,
+    "new_output_language_tags": true,
     "normalizer": "Original Nemotron normalization preserved exactly",
     "profile": "latin-indic",
-    "profile_version": 5,
+    "profile_version": 6,
     "prompt_registry": "Separate from output-token inventory; preserve selected source prompt slots",
     "retained_original_ids_unchanged": true,
     "schema_version": 1,
     "scope": "Original Nemotron Latin/Indic/shared pieces plus approved Indic/shared additions; relevant source specials",
     "source_addition_policy": "Use hash-pinned source-selection entries; exclude approved_rare_latin_character provenance and all later Latin coverage extensions",
-    "special_tokens": "Filter existing locale tags by explicit language scope before protobuf type; retain technical specials; invent no tags",
+    "special_tokens": "Filter existing locale tags by explicit language scope before protobuf type; retain technical specials; add output tags only for the profile's Indic languages, in reused original tag slots",
     "unicode_script_policy": {
       "allowed_scripts": [
         "Latin",
@@ -10304,7 +10320,7 @@
         "Telugu"
       ],
       "mixed_script_pieces": "Keep a NORMAL piece only when every character is allowed",
-      "non_normal_pieces": "Filter existing locale tags by explicit language scope before protobuf type; retain technical specials; invent no tags",
+      "non_normal_pieces": "Filter existing locale tags by explicit language scope before protobuf type; retain technical specials; add output tags only for the profile's Indic languages, in reused original tag slots",
       "normalizer": "Exact copy of the source; no text cleaning added",
       "policy": "unicode-script-and-extensions-common-punctuation-v1",
       "profile": "latin-indic",
@@ -10338,7 +10354,7 @@
     {
       "full_native_id": 1,
       "piece": "<bg-BG>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 3,
@@ -11166,6 +11182,11 @@
       "reason": "outside_profile"
     },
     {
+      "full_native_id": 397,
+      "piece": "<da-DK>",
+      "reason": "language_tag_slot"
+    },
+    {
       "full_native_id": 507,
       "piece": "ς",
       "reason": "outside_profile"
@@ -11218,7 +11239,7 @@
     {
       "full_native_id": 673,
       "piece": "<el-GR>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 674,
@@ -11978,7 +11999,7 @@
     {
       "full_native_id": 2021,
       "piece": "<ru-RU>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 2022,
@@ -12493,7 +12514,7 @@
     {
       "full_native_id": 2440,
       "piece": "<uk-UA>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 2441,
@@ -12936,14 +12957,9 @@
       "reason": "outside_profile"
     },
     {
-      "full_native_id": 2529,
-      "piece": "<ar-AR>",
-      "reason": "outside_profile"
-    },
-    {
       "full_native_id": 3134,
       "piece": "<he-IL>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 3135,
@@ -13508,7 +13524,7 @@
     {
       "full_native_id": 3446,
       "piece": "<ja-JP>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 3447,
@@ -33693,7 +33709,7 @@
     {
       "full_native_id": 7489,
       "piece": "<ko-KR>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 7490,
@@ -44208,7 +44224,7 @@
     {
       "full_native_id": 9695,
       "piece": "<th-TH>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 9696,
@@ -44808,7 +44824,7 @@
     {
       "full_native_id": 9847,
       "piece": "<zh-CN>",
-      "reason": "outside_profile"
+      "reason": "language_tag_slot"
     },
     {
       "full_native_id": 9848,

@@ -791,7 +791,7 @@
       },
       "new_target_count": 12,
       "num_prompts": 128,
-      "output_language_tags_added": false,
+      "output_language_tags_added": true,
       "previous_registry_sha256": null,
       "profile": "latin-indic",
       "prompt_dictionary": {

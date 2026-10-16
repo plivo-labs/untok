@@ -23,7 +23,7 @@ All four bundles are included.
 | --- | ---: | ---: | ---: | --- |
 | `original` | 13,087 | 13,087 | 13,087 | Exact Nemotron base |
 | `latin` | 2,653 | 13,087 | 13,087 | Original Latin/shared pieces and relevant tags |
-| `latin-indic` | 10,372 | 20,360 | 20,360 | 3,099 original pieces + 7,273 Indic/shared additions |
+| `latin-indic` | 10,382 | 20,360 | 20,360 | 3,099 original pieces + 7,273 Indic/shared additions + 10 Indic language tags |
 | `full` | 20,360 | 20,360 | 20,360 | All original pieces + the same additions |
 
 Retained pieces keep their original IDs, scores and types. The original
