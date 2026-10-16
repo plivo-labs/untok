@@ -8,7 +8,7 @@ inactive slots instead of renumbering the remaining pieces.
 | --- | ---: | ---: | ---: | ---: | ---: |
 | `original` | 13,087 | 0 | 13,087 | 0 | 13,087 |
 | `latin` | 2,653 | 0 | 2,653 | 10,434 | 13,087 |
-| `latin-indic` | 3,099 | 7,273 | 10,372 | 9,988 | 20,360 |
+| `latin-indic` | 3,099 | 7,273 + 10 tags | 10,382 | 9,978 | 20,360 |
 | `full` | 13,087 | 7,273 | 20,360 | 0 | 20,360 |
 
 The original model is byte-identical to NVIDIA's embedded model, with SHA256
@@ -22,9 +22,20 @@ SentencePiece piece types cannot restrict a model's logits. Migration retains
 inactive checkpoint weights as well as active weights, so subsets do not shrink
 the acoustic model.
 
-Latin has 28 original language tags; Latin + Indic adds the original Hindi tag.
-Original and Full retain all 39 original tags. No new output tags or extra Latin
-character bank are added. Acoustic prompt slots are separate model inputs.
+Latin has 28 original language tags. Original and Full retain all 39 original
+tags. Latin + Indic (profile version 6) keeps 29 original tags (the 27 Latin-script
+ones except Danish, plus Hindi and Arabic) and adds output tags for the 10 Indic
+languages NVIDIA has none for: `<bn-IN>` 1, `<ml-IN>` 397, `<ta-IN>` 673, `<te-IN>`
+2021, `<kn-IN>` 2440, `<mr-IN>` 3134, `<gu-IN>` 3446, `<pa-IN>` 7489, `<or-IN>`
+9695, `<as-IN>` 9847. They reuse slots of original tags outside the profile
+(`<bg-BG>`, `<el-GR>`, `<ru-RU>`, `<uk-UA>`, `<he-IL>`, `<ja-JP>`, `<ko-KR>`,
+`<th-TH>`, `<zh-CN>`, and `<da-DK>` for Malayalam), so no ID moves, and have the
+exact type and score of NVIDIA's `<hi-IN>`. A fresh migration still copies
+NVIDIA's rows of the replaced tags into these slots; `init-languages` starts
+them from `<hi-IN>`. Checkpoints made with the untagged
+version 5 are still accepted by `init-languages` and `calibrate` and keep their
+tokenizer. No extra Latin character bank is added. Acoustic prompt slots are
+separate model inputs.
 
 Selection follows the frozen approved inventory, not runtime script detection.
 Shared scripts do not identify one language exclusively. ZWNJ still normalizes
@@ -33,7 +44,8 @@ returns native-normalized text rather than necessarily the input spelling.
 
 New additions can change segmentation even where the original model knew every
 character. Re-encode training transcripts after changing bundles. Stable IDs
-preserve row meaning, not speech accuracy or an unchanged training objective.
+preserve row meaning (except the 10 slots reused for language tags), not speech
+accuracy or an unchanged training objective.
 
 See [assembly and verification](native-reproduction.md),
 [coverage evidence](language-coverage.md) and

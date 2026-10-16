@@ -40,7 +40,7 @@ The learned blank row moves only when the vocabulary expands:
 | --- | ---: | ---: | ---: |
 | `original` | 13,087 | 0 | 13,087 |
 | `latin` | 13,087 | 10,434 | 13,087 |
-| `latin-indic` | 20,360 | 9,988 | 20,360 |
+| `latin-indic` | 20,360 | 9,978 | 20,360 |
 | `full` | 20,360 | 0 | 20,360 |
 
 Original text IDs remain `0..13086`. New native text IDs are `13087..20359`.
@@ -65,6 +65,11 @@ mass relative to retained text outputs. The default ratio is `0.05`, adjustable
 with `--max-new-mass-ratio`. For Latin + Indic, 1,462 additions have exact donor
 paths and 5,811 use the fallback; the default shift is **-8.064528728662534**.
 Original rows, including blank, are unchanged. There is no blank penalty.
+Slots reused for language tags (profile version 6) are no donors; against
+version 5 this swaps `<da-DK>` for the reactivated `<ar-AR>` in the fallback
+mean, with the same fallback count and shift. Migration copies NVIDIA's rows
+into the reused tag slots like every original row; `init-languages` then
+starts those tags from `<hi-IN>` (see [indic-languages.md](indic-languages.md)).
 
 This is an initialization bound, not a training constraint or accuracy guarantee.
 An averaged embedding does not reproduce the recurrent state of its donor

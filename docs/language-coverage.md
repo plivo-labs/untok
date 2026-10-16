@@ -1,7 +1,10 @@
 # Text coverage evidence
 
 These measurements describe the unchanged current tokenizer models, not speech
-accuracy or complete language support. The four bundles preserve included
+accuracy or complete language support. They were recorded on `latin-indic`
+version 5 (`bcd18a8e...`); version 6 only adds output-language tags, so text
+coverage is unchanged: version 5 and 6 tokenize identically except literal tag
+strings such as `<bn-IN>`, `<ar-AR>` and `<da-DK>`. The four bundles preserve included
 Nemotron IDs and the original normalizer. Subsets replace excluded original
 slots with inactive placeholders; neither Indic bundle adds a rare Latin bank.
 

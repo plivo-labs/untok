@@ -41,6 +41,13 @@ By default it prepares all 22 Indic languages of the profile (`--languages ta,te
   The trained rows come from the same script when NVIDIA's vocabulary had it (Arabic, Devanagari), otherwise from
   Devanagari. Decoder embedding rows of these tokens are drawn from N(0, 1). In a checkpoint that already writes
   Devanagari or Arabic, only the leftover copies are re-initialised, and they stay dormant (next section).
+- **Output tags.** `latin-indic` version 6 has `<bn-IN>`, `<ta-IN>`, ... `<as-IN>` in reused original tag slots, which
+  migration still fills with NVIDIA's rows of the replaced tags. The first `init-languages` starts every one of these
+  tags, requested or not, as a copy of the trained `<hi-IN>` output row and decoder embedding row with its bias 8
+  lower, so it never ties with `<hi-IN>` (an exact copy would win greedy ties through its lower ID). `NewSliceLR` trains
+  the tag rows of the listed languages at the new-row rate, so a recipe with tag targets lifts them; without tag
+  targets they stay silent. The record lists them under `tags`. Checkpoints made with the untagged version 5 keep their
+  tokenizer and get no tags.
 - Every other value stays bit-identical; the command verifies this.
 
 Until calibration, every such row is exactly the mean of the trained rows with its bias 8 lower, so it stays silent:
@@ -115,7 +122,8 @@ instantiation.
 
 `untok normalize-manifest` applies the policy used with this recipe:
 
-- no language tags (`<hi-IN>`, `<unintelligible>`, ...) in any target;
+- no language tags (`<hi-IN>`, `<unintelligible>`, ...) in any target (a recipe that trains the profile's output tags
+  adds them itself);
 - Indic text without punctuation, and numbers spelled out in the row's language with AI4Bharat's
   [indic_numtowords](https://pypi.org/project/indic-numtowords/) (`pip install untok[text]`). Thousands separators are
   dropped first and each run of digits is read as one number;

@@ -16,7 +16,9 @@ uv run python scripts/verify_tokens.py \
 The output directory must be new or empty. Verification independently compares
 model bytes, retained IDs/scores/types, normalizer, inactive slots and native
 blank positions with the approved bundle baseline. It also checks the complete
-artifact hashes. To inspect the shipped artifacts directly:
+artifact hashes. Those were captured from the e2f8acd snapshot for `original`,
+`latin` and `full`; `latin-indic` version 6 (output-language tags in reused
+original tag slots) is pinned from this repository. To inspect the shipped artifacts directly:
 
 ```sh
 uv run python scripts/verify_tokens.py

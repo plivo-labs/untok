@@ -1,20 +1,20 @@
 {
-  "active_vocabulary_size": 10372,
+  "active_vocabulary_size": 10382,
   "algorithm": "native_sentencepiece_unigram_profiles_v5",
   "asr_validated": false,
   "base_tokenizer_sha256": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
   "checkpoint_validated": false,
   "files": {
     "base-tokenizer.model": "ce3895e40806f02a26c3a225161b96ef682d6c0054bae32a245dec4258d7d291",
-    "cleanup.json": "4655ba6af8f9e28ee8e28dcfbfc23178f7421e03cf383d46aeca2bc3c6762b26",
+    "cleanup.json": "8fb64b9111c7be98a91678a3ae68eb9032b59b4b88486b0423ccce911a5a24a5",
     "full-tokenizer.model": "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8",
-    "native-row-map.json": "f2cd4021eb75415a810e12be628b404d7c98c81b2121c574217203dfb58b71b3",
-    "nemo-id-map.json": "e80a87ac55d4ab2295aa71e896852584dbc0a10b5ac26e07a9358243b80598e9",
-    "tokenizer.model": "bcd18a8e540bf46ac920eedef498b3d6d7d00424bfae2a25fd79b7e5ac0c9c79",
-    "vocabulary.json": "f57ff5e4fb1a5788b83c5442436f96cd8763476bd9c11c599debb2120a56507c"
+    "native-row-map.json": "db97a70b1114ac2275ea9971a5bd26dc0bd409399e34989d8232e7d1424bf3dd",
+    "nemo-id-map.json": "5e71715da2f260c454d9b251ec17876546ddbdc35fea8b08b53dbf46fc968054",
+    "tokenizer.model": "519fd23a973d31c227b5915d1498299407a307c195335b372a6bc87ed8dbcb7f",
+    "vocabulary.json": "d323a6970cf0ad124c82e87eaad75d4cf9242d76fb048415d3ecaffe20047e6b"
   },
   "full_tokenizer_sha256": "f987a99ce9448ca72bb2da11f36744254f9f9b12f5596fcb742ddedf950886a8",
-  "inactive_native_slot_count": 9988,
+  "inactive_native_slot_count": 9978,
   "native_blank_id": 20360,
   "native_blank_id_unchanged": false,
   "native_prefix_preserved": false,
@@ -24,7 +24,7 @@
   "original_native_blank_id": 13087,
   "original_native_entries_preserved": 3099,
   "original_native_row_slots_preserved": 13087,
-  "original_native_text_id_scope": "Every retained original piece; excluded original slots are inactive",
+  "original_native_text_id_scope": "Every retained original piece; excluded original slots are inactive except those reused for the profile's language tags",
   "original_native_text_ids_unchanged": true,
   "original_native_vocabulary_size": 13087,
   "original_normalizer_unchanged": true,
@@ -35,6 +35,9 @@
   "schema_version": 1,
   "status": "tokenizer_profile_candidate",
   "structural_passed": true,
-  "tokenizer_sha256": "bcd18a8e540bf46ac920eedef498b3d6d7d00424bfae2a25fd79b7e5ac0c9c79",
-  "tokenizer_version": 5
+  "superseded_tokenizer_sha256": [
+    "bcd18a8e540bf46ac920eedef498b3d6d7d00424bfae2a25fd79b7e5ac0c9c79"
+  ],
+  "tokenizer_sha256": "519fd23a973d31c227b5915d1498299407a307c195335b372a6bc87ed8dbcb7f",
+  "tokenizer_version": 6
 }

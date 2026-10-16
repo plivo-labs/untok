@@ -275,7 +275,7 @@ def calibrate(source, output, *, source_sha256, manifests, bundle="latin-indic",
         for info in metadata["languages"].values():
             if info["script"] == script and info["rows"] == "initialized":
                 info["calibrated"] = True
-    save_with_metadata(model, metadata, output, tokenizer_dir, adapter)
+    save_with_metadata(model, metadata, output, tokenizer_dir)
     report = {"checkpoint_sha256": _sha256(output), "source_checkpoint_sha256": source_sha256,
               "tokenizer_directory": str(tokenizer_dir), "calibrated_scripts": receipts, "skipped": skipped,
               "languages": metadata["languages"]}

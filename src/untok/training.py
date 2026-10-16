@@ -7,10 +7,11 @@ class NewSliceLR(pl.Callback):
     """Lightning callback: new-language rows learn faster than the shared layers they sit in.
 
     NeMo sets learning rates per module, not for a few rows of one layer. The output rows and biases, decoder
-    embedding rows and prompt columns of the trained new languages are mirrored in a small side AdamW: the main
-    optimizer sees a zero gradient there, and the side optimizer applies its own rates (linear warmup, hold, linear
-    decay to `final_ratio` from `decay_start` of `max_steps`). Before training it refuses any listed language whose
-    initialised rows were not calibrated (`untok calibrate`), reading the metadata from the init checkpoint.
+    embedding rows, prompt columns and dormant output-tag rows of the trained new languages are mirrored in a small
+    side AdamW: the main optimizer sees a zero gradient there, and the side optimizer applies its own rates (linear
+    warmup, hold, linear decay to `final_ratio` from `decay_start` of `max_steps`). Before training it refuses any
+    listed language whose initialised rows were not calibrated (`untok calibrate`), reading the metadata from the init
+    checkpoint.
     """
 
     def __init__(self, init_checkpoint, languages, lr_rows=3e-3, lr_embedding=1e-3, lr_prompt=1e-3,
@@ -36,7 +37,9 @@ class NewSliceLR(pl.Callback):
     def on_fit_start(self, trainer, pl_module):
         languages = [self.metadata["languages"][locale] for locale in self.languages]
         scripts = sorted({l["script"] for l in languages if l["rows"] == "initialized"})
-        rows = sorted({r for s in scripts for r in self.metadata["scripts"][s]["rows"]})
+        tags = self.metadata.get("tags") or {}
+        tag_rows = {tags[l]["id"] for l in self.languages if l in tags and tags[l]["init"] != "kept_trained"}
+        rows = sorted({r for s in scripts for r in self.metadata["scripts"][s]["rows"]} | tag_rows)
         enc_hidden = int(pl_module.cfg.model_defaults.enc_hidden)
         columns = sorted({enc_hidden + l["prompt_slot"] for l in languages if l["prompt_init"] == "auto_copy"})
         head = pl_module.joint.joint_net[-1]
@@ -72,7 +75,8 @@ class NewSliceLR(pl.Callback):
             self.scheduler.load_state_dict(self._pending["scheduler"])
             for parameter, value in zip(self.side, self._pending["side"]):
                 parameter.data.copy_(value.to(parameter.device))
-        print(f"[untok.NewSliceLR] {len(rows)} new rows ({', '.join(scripts)}), {len(columns)} prompt columns; "
+        print(f"[untok.NewSliceLR] {len(rows)} new rows ({', '.join(scripts)}; {len(tag_rows)} tags), "
+              f"{len(columns)} prompt columns; "
               f"learning rates {self.lrs}", flush=True)
 
     def on_before_optimizer_step(self, trainer, pl_module, optimizer):

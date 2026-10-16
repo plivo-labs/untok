@@ -10,7 +10,7 @@ def test_check_reports_native_ids(capsys):
     assert main(["check", "--bundle", "latin-indic"]) == 0
     result = json.loads(capsys.readouterr().out)
     assert result["native_vocabulary_size"] == result["native_blank_id"] == 20360
-    assert result["active_vocabulary_size"] == 10372
+    assert result["active_vocabulary_size"] == 10382
 
 
 def test_migration_requires_hash_and_forwards_initialization_settings(monkeypatch, capsys):
